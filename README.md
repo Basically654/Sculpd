@@ -15,6 +15,7 @@ Database & Engine Layer: PostgreSQL hosted natively on Supabase
 Deployment & Hosting: Vercel
 
 # Data Schema Relationship
+---
 The architecture enforces strict relational integrity over standard flexible JSON to maximize rapid historical queries:
 ```text
 ┌──────────────┐       ┌─────────────────┐       ┌────────────────┐
