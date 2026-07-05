@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+/* Ensure the parent windows stay completely frozen */
+html, body {
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  position: fixed;
+  background-color: #000000;
+}
+
+/* Force the inner view container to handle its own scrolling dynamically */
+main {
+  height: 100%;
+  width: 100%;
+  overflow-y: scroll; /* Forces vertical touch interaction tracks */
+  -webkit-overflow-scrolling: touch; /* Leverages native iOS friction physics */
+  overscroll-behavior-y: contain; /* Blocks elastic page-pull refreshes */
+}
