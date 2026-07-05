@@ -9,7 +9,7 @@ interface WorkoutPageProps {
 }
 
 export default async function WorkoutPage({ params }: WorkoutPageProps) {
-  const { day } = params; // ❌ remove await
+  const { day } = await params;
 
   const lowercaseDay = day.toLowerCase().trim();
 
