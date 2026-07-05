@@ -9,7 +9,7 @@ interface WorkoutPageProps {
 }
 
 export default async function WorkoutPage({ params }: WorkoutPageProps) {
-  const { day } = await params;
+  const { day } = params; // ❌ remove await
   const lowercaseDay = day.toLowerCase().trim();
 
   // 1. Core Lookup matching the lowercase URL string perfectly
