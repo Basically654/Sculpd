@@ -8,6 +8,16 @@ interface WorkoutPageProps {
   params: Promise<{ day: string }>;
 }
 
+export async function generateStaticParams() {
+  return [
+    { day: 'monday' },
+    { day: 'tuesday' },
+    { day: 'wednesday' },
+    { day: 'thursday' },
+    { day: 'friday' }
+  ];
+}
+
 export default async function WorkoutPage({ params }: WorkoutPageProps) {
   const { day } = await params;
   const lowercaseDay = day.toLowerCase().trim();
