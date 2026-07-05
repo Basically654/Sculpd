@@ -25,6 +25,7 @@ The architecture enforces strict relational integrity over standard flexible JSO
                        ┌─────────────────┐       ┌────────────────┐
                        │  Workout_Log    │───◄   │    Set_Log     │
                        └─────────────────┘       └────────────────┘
+
 📂 Project Directory StructurePlaintext├── app/
 │   ├── layout.tsx         # Global layouts, PWA viewport/meta tags (zoom prevention)
 │   ├── page.tsx           # Dashboard / Quick Day-of-the-Week selector
@@ -43,6 +44,7 @@ The architecture enforces strict relational integrity over standard flexible JSO
 │   └── supabase.ts        # Supabase client instantiation
 └── types/
     └── database.types.ts  # Generated TypeScript definitions from Postgres
+```
     
 ⚡ Quick Start & Development Setup
 1. PrerequisitesEnsure you have the latest Node.js LTS version installed locally.
