@@ -5,17 +5,7 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 interface WorkoutPageProps {
-  params: Promise<{ day: string }>;
-}
-
-export async function generateStaticParams() {
-  return [
-    { day: 'monday' },
-    { day: 'tuesday' },
-    { day: 'wednesday' },
-    { day: 'thursday' },
-    { day: 'friday' }
-  ];
+  params: { day: string };
 }
 
 export default async function WorkoutPage({ params }: WorkoutPageProps) {
