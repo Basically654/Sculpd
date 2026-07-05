@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase";
 import ExerciseCard from "@/components/workout/ExerciseCard";
 import Link from "next/link";
 
-export const dynamic = "force-dynamic";
+export const dynamic = "force-static";
 
 interface WorkoutPageProps {
   params: { day: string };
