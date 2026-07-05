@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase";
 import ExerciseCard from "@/components/workout/ExerciseCard";
 import Link from "next/link";
 
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
 
 interface WorkoutPageProps {
   params: { day: string };
@@ -10,6 +10,7 @@ interface WorkoutPageProps {
 
 export default async function WorkoutPage({ params }: WorkoutPageProps) {
   const { day } = params; // ❌ remove await
+
   const lowercaseDay = day.toLowerCase().trim();
 
   // 1. Core Lookup matching the lowercase URL string perfectly
