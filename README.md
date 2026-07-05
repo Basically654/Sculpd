@@ -14,8 +14,9 @@ Styling & Native PWA Layout Controls: Tailwind CSS
 Database & Engine Layer: PostgreSQL hosted natively on Supabase 
 Deployment & Hosting: Vercel
 
-Data Schema Relationship
+# Data Schema Relationship
 The architecture enforces strict relational integrity over standard flexible JSON to maximize rapid historical queries:
+```text
 ┌──────────────┐       ┌─────────────────┐       ┌────────────────┐
 │     User     │───◄   │ Routine_Day     │───◄   │    Exercise    │
 └──────────────┘       └─────────────────┘       └────────────────┘
