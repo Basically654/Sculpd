@@ -65,3 +65,39 @@ export async function logSetAction(exerciseId: string, weight: number, reps: num
     throw globalCatchError;
   }
 }
+
+export async function deleteLastSetAction(exerciseId: string) {
+  try {
+    const { data: targetSet, error: findError } = await supabase
+      .from("set_logs")
+      .select("id")
+      .eq("exercise_id", exerciseId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (findError) {
+      console.error("❌ SUPABASE SET FETCH ERROR:", findError.message);
+      throw new Error(`Failed to identify latest set: ${findError.message}`);
+    }
+
+    if (!targetSet?.id) {
+      return;
+    }
+
+    const { error: deleteError } = await supabase
+      .from("set_logs")
+      .delete()
+      .eq("id", targetSet.id);
+
+    if (deleteError) {
+      console.error("❌ SUPABASE SET DELETE CRASH:", deleteError.message);
+      throw new Error(`Failed to delete latest set: ${deleteError.message}`);
+    }
+
+    revalidatePath("/workout/[day]", "page");
+  } catch (globalCatchError: any) {
+    console.error("🚨 GLOBAL ACTION CRITICAL BREAKPOINT:", globalCatchError?.message || globalCatchError);
+    throw globalCatchError;
+  }
+}

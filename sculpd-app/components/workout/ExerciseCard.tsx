@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { logSetAction } from "@/app/workout/actions";
+import { logSetAction, deleteLastSetAction } from "@/app/workout/actions";
 import { useRouter } from "next/navigation";
 import ProgressChart from "./ProgressChart";
 import { useTimer } from "@/components/timer/TimerContext";
@@ -210,6 +210,30 @@ export default function ExerciseCard({
         >
           +
         </button>
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={async () => {
+            if (setsLogged.length === 0) return;
+            try {
+              await deleteLastSetAction(exercise.id);
+              const updatedSets = setsLogged.slice(0, -1);
+              setSetsLogged(updatedSets);
+              localStorage.setItem(
+                `sets-${exercise.id}`,
+                JSON.stringify(updatedSets),
+              );
+              router.refresh();
+            } catch (error) {
+              console.warn("Failed to remove last set.", error);
+            }
+          }}
+          className="text-xs text-zinc-200 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2"
+        >
+          Remove Last Set
+        </button>
+        <div className="text-xs text-zinc-500">{setsLogged.length} logged</div>
       </div>
       {/* RPE selector row */}
       <div className="mt-3 flex gap-2 items-center">
