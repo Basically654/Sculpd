@@ -1,6 +1,8 @@
 // app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { TimerProvider } from "@/components/timer/TimerContext";
+import RestTimerBar from "@/components/timer/RestTimerBar";
 
 // 1. Deny elastic responsive layouts (Kills iOS input auto-zoom anomalies)
 export const viewport: Viewport = {
@@ -29,9 +31,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="h-full bg-black text-white antialiased overflow-hidden select-none touch-none">
+    <html
+      lang="en"
+      className="h-full bg-black text-white antialiased overflow-hidden select-none touch-none"
+    >
       <body className="h-full w-full overflow-y-auto webkit-overflow-scrolling-touch">
-        {children}
+        <TimerProvider>
+          {children}
+          <RestTimerBar />
+        </TimerProvider>
       </body>
     </html>
   );

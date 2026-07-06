@@ -4,7 +4,7 @@
 import { supabase } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 
-export async function logSetAction(exerciseId: string, weight: number, reps: number) {
+export async function logSetAction(exerciseId: string, weight: number, reps: number, rpe?: number | null) {
   try {
     // 1. Recover or generate an active global workout container log session row
     let { data: activeLog, error: logFetchError } = await supabase
@@ -39,16 +39,18 @@ export async function logSetAction(exerciseId: string, weight: number, reps: num
     }
 
     // 2. Insert performance metric directly into the set tracking index
+    const insertPayload: any = {
+      workout_log_id: activeLog.id,
+      exercise_id: exerciseId,
+      weight: weight,
+      reps: reps,
+    };
+
+    if (typeof rpe === "number") insertPayload.rpe = rpe;
+
     const { error: setInsertError } = await supabase
       .from("set_logs")
-      .insert([
-        {
-          workout_log_id: activeLog.id,
-          exercise_id: exerciseId,
-          weight: weight,
-          reps: reps
-        }
-      ]);
+      .insert([insertPayload]);
 
     if (setInsertError) {
       console.error("❌ SUPABASE SET INSERTION CRASH:", setInsertError.message);
