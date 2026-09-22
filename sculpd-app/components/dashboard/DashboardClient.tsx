@@ -1,14 +1,14 @@
 // components/dashboard/DashboardClient.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
 import { useUser } from "@/components/auth/UserContext";
 import WhoIsTrainingView from "@/components/auth/WhoIsTrainingView";
 import UserBar from "@/components/auth/UserBar";
-import { getAllRoutines } from "@/lib/db/routine-repository";
+import { getAllRoutines, seedDefaultCatalog } from "@/lib/db/routine-repository";
 import {
   getActiveWorkoutSession,
   cancelWorkoutSession,
@@ -17,6 +17,13 @@ import {
 export default function DashboardClient() {
   const { activeUserId, isLoading: isAuthLoading } = useUser();
   const [isDiscarding, setIsDiscarding] = useState(false);
+
+  // Seed default routines and exercises on mount (runs outside liveQuery)
+  useEffect(() => {
+    seedDefaultCatalog().catch((err) => {
+      console.warn("Catalog seed notice:", err);
+    });
+  }, []);
 
   // 1. Live Query: Load all routines from IndexedDB
   const routines = useLiveQuery(

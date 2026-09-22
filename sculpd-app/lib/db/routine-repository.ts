@@ -268,7 +268,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
 
 /**
  * Seeds default routines and exercises into IndexedDB if table is empty.
- * Idempotent and safe to call on app startup.
+ * Idempotent write transaction. Call outside of liveQuery contexts (e.g. in useEffect or init).
  */
 export async function seedDefaultCatalog(): Promise<void> {
   const routineCount = await db.routines.count();
@@ -282,53 +282,62 @@ export async function seedDefaultCatalog(): Promise<void> {
 
 /**
  * Retrieves all routines from IndexedDB ordered by displayOrder.
- * Ensures catalog is seeded first.
+ * Pure read-only operation safe for liveQuery contexts.
  */
 export async function getAllRoutines(): Promise<Routine[]> {
-  await seedDefaultCatalog();
-  return db.routines.orderBy("displayOrder").toArray();
+  const items = await db.routines.orderBy("displayOrder").toArray();
+  if (items.length > 0) return items;
+  return DEFAULT_ROUTINES;
 }
 
 /**
  * Retrieves a single routine by its slug (e.g. "monday", "tuesday").
+ * Pure read-only operation safe for liveQuery contexts.
  */
 export async function getRoutineBySlug(
   slug: string
 ): Promise<Routine | undefined> {
-  await seedDefaultCatalog();
   const normalized = slug.toLowerCase().trim();
-  return db.routines.where("slug").equals(normalized).first();
+  const found = await db.routines.where("slug").equals(normalized).first();
+  if (found) return found;
+  return DEFAULT_ROUTINES.find((r) => r.slug === normalized);
 }
 
 /**
  * Retrieves a single routine by its UUID/id.
+ * Pure read-only operation safe for liveQuery contexts.
  */
 export async function getRoutineById(
   id: string
 ): Promise<Routine | undefined> {
-  await seedDefaultCatalog();
-  return db.routines.get(id);
+  const found = await db.routines.get(id);
+  if (found) return found;
+  return DEFAULT_ROUTINES.find((r) => r.id === id);
 }
 
 /**
  * Retrieves all exercises associated with a specific routine, ordered by displayOrder.
+ * Pure read-only operation safe for liveQuery contexts.
  */
 export async function getExercisesForRoutine(
   routineId: string
 ): Promise<Exercise[]> {
-  await seedDefaultCatalog();
-  return db.exercises
+  const exercises = await db.exercises
     .where("routineId")
     .equals(routineId)
     .sortBy("displayOrder");
+  if (exercises.length > 0) return exercises;
+  return DEFAULT_EXERCISES.filter((e) => e.routineId === routineId);
 }
 
 /**
  * Retrieves a single exercise by its id.
+ * Pure read-only operation safe for liveQuery contexts.
  */
 export async function getExerciseById(
   exerciseId: string
 ): Promise<Exercise | undefined> {
-  await seedDefaultCatalog();
-  return db.exercises.get(exerciseId);
+  const found = await db.exercises.get(exerciseId);
+  if (found) return found;
+  return DEFAULT_EXERCISES.find((e) => e.id === exerciseId);
 }

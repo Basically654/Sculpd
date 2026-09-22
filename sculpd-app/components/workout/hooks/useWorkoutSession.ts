@@ -8,6 +8,7 @@ import { Routine, Exercise, WorkoutSession, WorkoutSet } from "@/types/models";
 import {
   getRoutineBySlug,
   getExercisesForRoutine,
+  seedDefaultCatalog,
 } from "@/lib/db/routine-repository";
 import {
   startWorkoutSession,
@@ -63,6 +64,9 @@ export function useWorkoutSession({
       setError(null);
 
       try {
+        // Ensure catalog is seeded (outside liveQuery)
+        await seedDefaultCatalog();
+
         // Fetch routine by slug from IndexedDB
         const loadedRoutine = await getRoutineBySlug(routineSlug);
         if (!loadedRoutine) {

@@ -6,6 +6,7 @@ import {
   getAllRoutines,
   getRoutineBySlug,
   getExercisesForRoutine,
+  seedDefaultCatalog,
 } from "../lib/db/routine-repository";
 import {
   startWorkoutSession,
@@ -37,6 +38,7 @@ async function runPhase4Tests() {
   // Clear any existing database state
   await db.delete();
   await db.open();
+  await seedDefaultCatalog();
 
   // Create isolated test athletes
   const userA = await createUser({
@@ -58,7 +60,7 @@ async function runPhase4Tests() {
 
   const mondayRoutine = await getRoutineBySlug("monday");
   assert(Boolean(mondayRoutine), "Loaded 'monday' routine from IndexedDB by slug");
-  assert(mondayRoutine?.focusTarget.includes("Glute"), "Monday routine has focusTarget");
+  assert(Boolean(mondayRoutine?.focusTarget.includes("Glute")), "Monday routine has focusTarget");
 
   const mondayExercises = await getExercisesForRoutine(mondayRoutine!.id);
   assert(mondayExercises.length >= 4, `Monday exercises loaded from IndexedDB (${mondayExercises.length} exercises)`);
