@@ -60,12 +60,12 @@ async function runPhase4Tests() {
 
   const mondayRoutine = await getRoutineBySlug("monday");
   assert(Boolean(mondayRoutine), "Loaded 'monday' routine from IndexedDB by slug");
-  assert(Boolean(mondayRoutine?.focusTarget.includes("Glute")), "Monday routine has focusTarget");
+  assert(Boolean(mondayRoutine?.focusTarget?.includes("Glute")), "Monday routine has focusTarget");
 
   const mondayExercises = await getExercisesForRoutine(mondayRoutine!.id);
   assert(mondayExercises.length >= 4, `Monday exercises loaded from IndexedDB (${mondayExercises.length} exercises)`);
   assert(Boolean(mondayExercises[0].name), `First exercise is "${mondayExercises[0].name}"`);
-  assert(mondayExercises[0].targetSets > 0, "Exercise defines targetSets");
+  assert((mondayExercises[0].targetSets || 0) > 0, "Exercise defines targetSets");
   assert(Boolean(mondayExercises[0].targetReps), "Exercise defines targetReps");
 
   const ex1 = mondayExercises[0];

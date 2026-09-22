@@ -4,7 +4,14 @@ import {
   WorkoutSession,
   WorkoutSet,
   SyncQueueItem,
+  WorkoutSessionExerciseSnapshot,
 } from "@/types/models";
+import {
+  getRoutineWithExercises,
+  getRoutineById,
+  getRoutineBySlug,
+  getExercisesForRoutine,
+} from "./routine-repository";
 
 /**
  * Ensures a valid userId is provided before executing queries.
@@ -59,6 +66,8 @@ export async function getActiveWorkoutSession(
 
 /**
  * Starts a new workout session for a specific user.
+ * Snapshots routine name and exercise configurations at start time to guarantee
+ * that historical workouts remain immutable even if the routine template is modified later.
  * If an active session already exists for this routine, returns it.
  */
 export async function startWorkoutSession(
@@ -76,11 +85,48 @@ export async function startWorkoutSession(
     await completeWorkoutSession(userId, existingActive.id);
   }
 
+  // Create immutable snapshot of routine details and exercises at start time
+  let routineName = "Workout";
+  let exerciseSnapshots: WorkoutSessionExerciseSnapshot[] = [];
+
+  const routineWithExercises = await getRoutineWithExercises(routineId);
+  if (routineWithExercises) {
+    routineName = routineWithExercises.name;
+    exerciseSnapshots = routineWithExercises.exercises.map((item) => ({
+      exerciseId: item.exerciseId,
+      name: item.exercise.name,
+      displayOrder: item.displayOrder,
+      targetSets: item.targetSets,
+      targetReps: item.targetReps,
+      restSeconds: item.restSeconds,
+      notes: item.notes,
+    }));
+  } else {
+    // Legacy fallback for slug or legacy ID
+    const legacyRoutine =
+      (await getRoutineById(routineId)) || (await getRoutineBySlug(routineId));
+    if (legacyRoutine) {
+      routineName = legacyRoutine.name || legacyRoutine.dayName || "Workout";
+      const legacyExercises = await getExercisesForRoutine(routineId);
+      exerciseSnapshots = legacyExercises.map((ex, idx) => ({
+        exerciseId: ex.id,
+        name: ex.name,
+        displayOrder: ex.displayOrder ?? idx + 1,
+        targetSets: ex.targetSets ?? 3,
+        targetReps: ex.targetReps ?? "8-10",
+        restSeconds: 90,
+        notes: ex.coachingCue || undefined,
+      }));
+    }
+  }
+
   const now = new Date().toISOString();
   const session: WorkoutSession = {
     id: globalThis.crypto.randomUUID(),
     userId,
     routineId,
+    routineName,
+    exerciseSnapshots,
     startedAt: now,
     completedAt: null,
     status: "in_progress",

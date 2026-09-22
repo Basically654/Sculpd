@@ -85,7 +85,8 @@ export default function PostWorkoutView({
             Workout Complete
           </h1>
           <p className="text-xs font-mono text-emerald-400 uppercase tracking-wider font-bold">
-            {routine.dayName} • {routine.focusTarget}
+            {routine.name || routine.dayName}
+            {(routine.description || routine.focusTarget) ? ` • ${routine.description || routine.focusTarget}` : ""}
           </p>
         </header>
 

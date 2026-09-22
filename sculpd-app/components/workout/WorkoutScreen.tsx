@@ -11,6 +11,7 @@ import { useWorkoutSession } from "./hooks/useWorkoutSession";
 import DominantRestView from "./DominantRestView";
 import PROverlay from "./PROverlay";
 import PostWorkoutView from "./PostWorkoutView";
+import WorkoutPreview from "./WorkoutPreview";
 
 interface WorkoutScreenProps {
   routineSlug: string;
@@ -27,6 +28,7 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isCompletedSession, setIsCompletedSession] = useState<boolean>(false);
+  const [hasStartedWorkout, setHasStartedWorkout] = useState<boolean>(false);
 
   const {
     routine,
@@ -111,6 +113,17 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
     );
   }
 
+  // Workout Preview before starting
+  const hasLoggedSets = sessionSets && sessionSets.length > 0;
+  if (!hasStartedWorkout && !hasLoggedSets) {
+    return (
+      <WorkoutPreview
+        routineId={routine.id}
+        onStart={() => setHasStartedWorkout(true)}
+      />
+    );
+  }
+
   // Post-Workout Experience Transition
   if (isCompletedSession) {
     return (
@@ -176,7 +189,7 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
           exercise={currentExercise}
           lastLoggedSet={lastLoggedSet}
           nextSetNumber={nextSetNumber}
-          totalSetsTarget={currentExercise.targetSets}
+          totalSetsTarget={currentExercise.targetSets || 3}
           onSkipRest={timer.skip}
           onDeleteLastSet={deleteLastSet}
         />
@@ -201,7 +214,7 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
               ←
             </Link>
             <span className="text-zinc-400 uppercase font-black tracking-wider">
-              {routine.dayName}
+              {routine.name || routine.dayName}
             </span>
             <span className="text-zinc-600">•</span>
             <span className="text-zinc-500">
@@ -355,7 +368,7 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
           {exercises.map((ex, idx) => {
             const isActive = idx === currentExerciseIndex;
             const exSets = sessionSets?.filter((s) => s.exerciseId === ex.id) || [];
-            const isDone = exSets.length >= ex.targetSets;
+            const isDone = exSets.length >= (ex.targetSets || 3);
 
             return (
               <button

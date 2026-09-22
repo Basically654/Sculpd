@@ -7,9 +7,11 @@ import { db } from "@/lib/db";
 import { Routine, Exercise, WorkoutSession, WorkoutSet } from "@/types/models";
 import {
   getRoutineBySlug,
+  getRoutineById,
+  getRoutineWithExercises,
   getExercisesForRoutine,
-  seedDefaultCatalog,
 } from "@/lib/db/routine-repository";
+import { seedExerciseCatalog } from "@/lib/db/exercise-repository";
 import {
   startWorkoutSession,
   completeWorkoutSession,
@@ -74,11 +76,12 @@ export function useWorkoutSession({
       setError(null);
 
       try {
-        // Ensure catalog is seeded outside liveQuery
-        await seedDefaultCatalog();
+        // Ensure standard exercise library is seeded outside liveQuery
+        await seedExerciseCatalog();
 
-        // Fetch routine by slug from IndexedDB
-        const loadedRoutine = await getRoutineBySlug(routineSlug);
+        // Fetch routine by ID or slug from IndexedDB
+        const loadedRoutine =
+          (await getRoutineById(routineSlug)) || (await getRoutineBySlug(routineSlug));
         if (!loadedRoutine) {
           if (isMounted) {
             setError(`Routine "${routineSlug}" not found in database.`);
@@ -87,26 +90,60 @@ export function useWorkoutSession({
           return;
         }
 
-        // Fetch exercises for this routine from IndexedDB
-        const loadedExercises = await getExercisesForRoutine(loadedRoutine.id);
-        if (loadedExercises.length === 0) {
-          if (isMounted) {
-            setError(`No exercises found for routine "${loadedRoutine.dayName}".`);
-            setIsLoading(false);
-          }
-          return;
-        }
-
-        // Check if an active session already exists for this routine
+        // Check if an active session already exists for this user and routine
         const existingActive = await getActiveWorkoutSession(currentUserId);
         let currentSession: WorkoutSession;
 
         if (existingActive && existingActive.routineId === loadedRoutine.id) {
-          // Resume existing session
           currentSession = existingActive;
         } else {
-          // Start a new session in IndexedDB
           currentSession = await startWorkoutSession(currentUserId, loadedRoutine.id);
+        }
+
+        // Load exercises: Prefer immutable session exercise snapshots if present
+        let loadedExercises: Exercise[] = [];
+
+        if (currentSession.exerciseSnapshots && currentSession.exerciseSnapshots.length > 0) {
+          loadedExercises = currentSession.exerciseSnapshots
+            .sort((a, b) => a.displayOrder - b.displayOrder)
+            .map((snap) => ({
+              id: snap.exerciseId,
+              name: snap.name,
+              targetSets: snap.targetSets,
+              targetReps: snap.targetReps,
+              coachingCue: snap.notes || null,
+              displayOrder: snap.displayOrder,
+              createdAt: currentSession.startedAt,
+              updatedAt: currentSession.updatedAt,
+              // extra metadata for timer and config
+              restSeconds: snap.restSeconds,
+            } as Exercise & { restSeconds?: number }));
+        } else {
+          // Fallback to routine exercise configs
+          const withExercises = await getRoutineWithExercises(loadedRoutine.id);
+          if (withExercises && withExercises.exercises.length > 0) {
+            loadedExercises = withExercises.exercises.map((item) => ({
+              ...item.exercise,
+              id: item.exerciseId,
+              routineId: loadedRoutine.id,
+              targetSets: item.targetSets,
+              targetReps: item.targetReps,
+              coachingCue: item.notes || null,
+              displayOrder: item.displayOrder,
+              updatedAt: item.updatedAt,
+              restSeconds: item.restSeconds,
+            } as Exercise & { restSeconds?: number }));
+          } else {
+            loadedExercises = await getExercisesForRoutine(loadedRoutine.id);
+          }
+        }
+
+        if (loadedExercises.length === 0) {
+          if (isMounted) {
+            setError(`No exercises found for workout "${loadedRoutine.name}".`);
+            setIsLoading(false);
+          }
+          return;
         }
 
         if (isMounted) {
@@ -278,10 +315,11 @@ export function useWorkoutSession({
         setPrsHit((prev) => [...prev, prCheck]);
       }
 
-      // 3. Start Rest Timer immediately (dominant rest state)
+      // 3. Start Rest Timer immediately using configured restSeconds or default 90
       try {
         const nextSetNum = currentExerciseSets.length + 2;
-        timer.start(90, currentExercise.name, nextSetNum);
+        const configuredRest = (currentExercise as any).restSeconds || 90;
+        timer.start(configuredRest, currentExercise.name, nextSetNum);
       } catch (timerErr) {
         console.warn("Could not start rest timer:", timerErr);
       }

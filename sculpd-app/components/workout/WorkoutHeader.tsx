@@ -45,7 +45,7 @@ export default function WorkoutHeader({
         <div>
           <div className="flex items-center gap-1.5">
             <h1 className="text-sm font-black uppercase text-zinc-100 tracking-tight">
-              {routine.dayName}
+              {routine.name || routine.dayName}
             </h1>
             <span className="text-zinc-600 text-xs">•</span>
             <span className="text-[11px] font-mono text-emerald-400 font-bold">
@@ -53,7 +53,7 @@ export default function WorkoutHeader({
             </span>
           </div>
           <p className="text-[10px] text-zinc-400 line-clamp-1 font-medium">
-            {routine.focusTarget}
+            {routine.description || routine.focusTarget}
           </p>
         </div>
       </div>

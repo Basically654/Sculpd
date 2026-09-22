@@ -162,11 +162,17 @@ export async function pullRemoteUpdates(
           await db.workoutSessions.delete(del.id);
         } else if (del.collection === "users") {
           await db.users.delete(del.id);
+        } else if (del.collection === "routines") {
+          await db.routines.delete(del.id);
+        } else if (del.collection === "routine_exercises") {
+          await db.routineExercises.delete(del.id);
+        } else if (del.collection === "exercises") {
+          await db.exercises.delete(del.id);
         }
       }
     }
 
-    // Merge shared catalog: routines & exercises
+    // Merge shared catalog & user routines: routines, exercises, routineExercises
     if (data.routines && data.routines.length > 0) {
       await db.routines.bulkPut(data.routines);
       pulledCount += data.routines.length;
@@ -174,6 +180,10 @@ export async function pullRemoteUpdates(
     if (data.exercises && data.exercises.length > 0) {
       await db.exercises.bulkPut(data.exercises);
       pulledCount += data.exercises.length;
+    }
+    if (data.routineExercises && data.routineExercises.length > 0) {
+      await db.routineExercises.bulkPut(data.routineExercises);
+      pulledCount += data.routineExercises.length;
     }
 
     // Merge user workout sessions using Last-Write-Wins timestamp comparison

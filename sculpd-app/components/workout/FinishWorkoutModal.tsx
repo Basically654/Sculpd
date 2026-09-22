@@ -62,7 +62,8 @@ export default function FinishWorkoutModal({
             Complete Workout
           </h2>
           <p className="text-xs font-mono text-zinc-400">
-            {routine.dayName} • {routine.focusTarget}
+            {routine.name || routine.dayName}
+            {(routine.description || routine.focusTarget) ? ` • ${routine.description || routine.focusTarget}` : ""}
           </p>
         </div>
 
