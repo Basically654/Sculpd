@@ -188,6 +188,22 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result);
   } catch (globalError: any) {
+    const isMongoOffline =
+      globalError?.name?.includes("Mongo") ||
+      globalError?.message?.includes("MONGODB_URI") ||
+      globalError?.message?.includes("getaddrinfo") ||
+      globalError?.message?.includes("timed out") ||
+      globalError?.message?.includes("ECONNREFUSED") ||
+      globalError?.message?.includes("buffering timed out");
+
+    if (isMongoOffline) {
+      console.warn("Sync push offline: Cloud database is unreachable:", globalError?.message || globalError);
+      return NextResponse.json(
+        { success: false, error: "Cloud database offline or unreachable." },
+        { status: 503 }
+      );
+    }
+
     console.error("Sync push endpoint error:", globalError);
     return NextResponse.json(
       { success: false, error: globalError?.message || "Internal server error." },

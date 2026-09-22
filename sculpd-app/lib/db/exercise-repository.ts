@@ -1,6 +1,7 @@
 // lib/db/exercise-repository.ts
 import { db } from "./index";
 import { Exercise, SyncQueueItem } from "@/types/models";
+import { generateUUID } from "@/lib/crypto/uuid";
 
 /**
  * Standard starter catalog of exercises across primary muscle groups.
@@ -281,6 +282,8 @@ export async function createCustomExercise(
     name: string;
     category?: string;
     equipment?: string;
+    description?: string;
+    coachingCue?: string;
   }
 ): Promise<Exercise> {
   if (!userId || typeof userId !== "string" || userId.trim() === "") {
@@ -291,12 +294,14 @@ export async function createCustomExercise(
   }
 
   const now = new Date().toISOString();
+  const cue = data.coachingCue?.trim() || data.description?.trim() || undefined;
   const newExercise: Exercise = {
-    id: globalThis.crypto.randomUUID(),
+    id: generateUUID(),
     userId,
     name: data.name.trim(),
     category: data.category?.trim() || undefined,
     equipment: data.equipment?.trim() || undefined,
+    coachingCue: cue,
     createdAt: now,
     updatedAt: now,
   };
@@ -305,7 +310,7 @@ export async function createCustomExercise(
     await db.exercises.add(newExercise);
 
     const syncItem: SyncQueueItem = {
-      id: globalThis.crypto.randomUUID(),
+      id: generateUUID(),
       userId,
       operation: "insert",
       collection: "exercises",

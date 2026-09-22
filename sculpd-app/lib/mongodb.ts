@@ -34,13 +34,22 @@ export function getMongoClientPromise(): Promise<MongoClient> {
   if (process.env.NODE_ENV === "development") {
     // In development mode, use a global variable so the connection is preserved across HMR reloads
     if (!global._mongoClientPromise) {
-      const client = new MongoClient(uri);
-      global._mongoClientPromise = client.connect();
+      const client = new MongoClient(uri, {
+        serverSelectionTimeoutMS: 5000,
+        connectTimeoutMS: 5000,
+      });
+      global._mongoClientPromise = client.connect().catch((err) => {
+        global._mongoClientPromise = undefined;
+        throw err;
+      });
     }
     return global._mongoClientPromise;
   } else {
     // In production mode, avoid global variable pollution
-    const client = new MongoClient(uri);
+    const client = new MongoClient(uri, {
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
+    });
     return client.connect();
   }
 }

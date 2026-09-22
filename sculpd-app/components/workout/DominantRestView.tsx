@@ -12,6 +12,7 @@ interface DominantRestViewProps {
   totalSetsTarget: number;
   onSkipRest: () => void;
   onDeleteLastSet?: () => Promise<any>;
+  onFinishWorkout?: () => void;
 }
 
 export default function DominantRestView({
@@ -21,6 +22,7 @@ export default function DominantRestView({
   totalSetsTarget,
   onSkipRest,
   onDeleteLastSet,
+  onFinishWorkout,
 }: DominantRestViewProps) {
   const { remaining, totalDuration, addTime } = useTimer();
 
@@ -100,9 +102,19 @@ export default function DominantRestView({
           <button
             type="button"
             onClick={onDeleteLastSet}
-            className="text-xs font-mono text-stone-500 hover:text-rose-400 transition-colors pt-1 cursor-pointer"
+            className="text-xs font-mono text-stone-500 hover:text-rose-400 transition-colors pt-1 cursor-pointer block mx-auto"
           >
             Undo last logged set
+          </button>
+        )}
+
+        {onFinishWorkout && (
+          <button
+            type="button"
+            onClick={onFinishWorkout}
+            className="text-[11px] font-mono uppercase tracking-wider text-stone-400 hover:text-white transition-colors cursor-pointer block mx-auto pt-1 font-semibold"
+          >
+            Finish Workout
           </button>
         )}
       </div>

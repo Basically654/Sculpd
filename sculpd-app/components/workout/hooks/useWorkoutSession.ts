@@ -366,6 +366,13 @@ export function useWorkoutSession({
         throw new Error("No active session to complete.");
       }
 
+      // Cleanly tear down any active local timers
+      try {
+        timer.stop();
+      } catch (timerErr) {
+        console.warn("Could not stop rest timer cleanly on finish:", timerErr);
+      }
+
       const completed = await completeWorkoutSession(userId, session.id, notes);
       setSession(completed);
 
@@ -383,12 +390,18 @@ export function useWorkoutSession({
 
       return completed;
     },
-    [userId, session, sessionIndexStorageKey, sessionToken]
+    [userId, session, sessionIndexStorageKey, sessionToken, timer]
   );
 
   // 8. Cancel / discard session
   const cancelWorkout = useCallback(async () => {
     if (!userId || !session) return;
+
+    try {
+      timer.stop();
+    } catch (timerErr) {
+      console.warn("Could not stop rest timer on cancel:", timerErr);
+    }
 
     await cancelWorkoutSession(userId, session.id);
     setSession(null);
@@ -402,7 +415,7 @@ export function useWorkoutSession({
         console.warn("Background sync warning on cancel:", syncErr);
       });
     }
-  }, [userId, session, sessionIndexStorageKey, sessionToken]);
+  }, [userId, session, sessionIndexStorageKey, sessionToken, timer]);
 
   const dismissPR = useCallback(() => {
     setActivePR(null);

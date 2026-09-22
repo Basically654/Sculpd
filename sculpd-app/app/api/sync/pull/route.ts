@@ -122,6 +122,22 @@ export async function GET(request: Request) {
 
     return NextResponse.json(result);
   } catch (error: any) {
+    const isMongoOffline =
+      error?.name?.includes("Mongo") ||
+      error?.message?.includes("MONGODB_URI") ||
+      error?.message?.includes("getaddrinfo") ||
+      error?.message?.includes("timed out") ||
+      error?.message?.includes("ECONNREFUSED") ||
+      error?.message?.includes("buffering timed out");
+
+    if (isMongoOffline) {
+      console.warn("Sync pull offline: Cloud database is unreachable:", error?.message || error);
+      return NextResponse.json(
+        { success: false, error: "Cloud database offline or unreachable." },
+        { status: 503 }
+      );
+    }
+
     console.error("Sync pull endpoint error:", error);
     return NextResponse.json(
       { success: false, error: error?.message || "Internal server error." },

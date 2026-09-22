@@ -61,7 +61,7 @@ export default function WorkoutHeader({
       <button
         type="button"
         onClick={onFinishClick}
-        className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-900 hover:text-black bg-stone-100 hover:bg-stone-200 border border-stone-200 px-3 py-1.5 rounded-lg active:scale-95 transition-all cursor-pointer"
+        className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-900 hover:text-black bg-stone-100 hover:bg-stone-200 border border-stone-200 px-3 py-1.5 rounded-lg active:scale-95 transition-all cursor-pointer min-h-[36px] flex items-center justify-center"
       >
         Finish
       </button>

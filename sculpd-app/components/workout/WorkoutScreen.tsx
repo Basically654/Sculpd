@@ -75,6 +75,13 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
     setValidationError(null);
   }, [currentExercise?.id, currentExerciseSets.length, previousSet?.id]);
 
+  // If session is already completed, transition to post-workout summary
+  React.useEffect(() => {
+    if (session?.status === "completed") {
+      setIsCompletedSession(true);
+    }
+  }, [session?.status]);
+
   // Auth gate
   if (isUserLoading) {
     return (
@@ -176,8 +183,15 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
   };
 
   const handleFinishWorkout = async () => {
-    await finishWorkout();
-    setIsCompletedSession(true);
+    try {
+      timer.stop();
+      await finishWorkout();
+      setIsCompletedSession(true);
+    } catch (err) {
+      console.error("Failed to finish workout:", err);
+      // Ensure we transition to the post-workout view even if background tasks warn
+      setIsCompletedSession(true);
+    }
   };
 
   // DOMINANT REST STATE
@@ -192,6 +206,7 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
           totalSetsTarget={currentExercise.targetSets || 3}
           onSkipRest={timer.skip}
           onDeleteLastSet={deleteLastSet}
+          onFinishWorkout={handleFinishWorkout}
         />
 
         {/* PR Overlay if hit on that set */}
@@ -225,7 +240,7 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
           <button
             type="button"
             onClick={handleFinishWorkout}
-            className="text-[11px] uppercase tracking-wider text-stone-500 hover:text-zinc-900 font-medium transition-colors cursor-pointer"
+            className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-900 hover:text-black bg-stone-100 hover:bg-stone-200 border border-stone-200 px-3 py-1.5 rounded-lg active:scale-95 transition-all cursor-pointer shadow-xs min-h-[36px] flex items-center justify-center"
           >
             Finish Workout
           </button>
@@ -312,48 +327,64 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
             <p className="text-xs font-mono text-rose-600 font-medium">{validationError}</p>
           )}
 
-          <div className="flex items-center gap-2.5">
-            {/* Weight Input */}
-            <div className="flex-1 relative">
-              <input
-                id="weight-input"
-                type="number"
-                step="any"
-                min="0"
-                inputMode="decimal"
-                placeholder="Weight"
-                value={weight}
-                onChange={(e) => setWeight(e.target.value)}
-                className="w-full h-14 bg-white border border-stone-300 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 rounded-xl px-3 font-mono font-bold text-2xl text-center text-zinc-900 placeholder-stone-300 transition-colors shadow-xs"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono uppercase text-stone-400 pointer-events-none font-bold">
-                lbs
-              </span>
+          <div className="flex items-end gap-2.5">
+            {/* Weight / Load Input */}
+            <div className="flex-1">
+              <label
+                htmlFor="weight-input"
+                className="block text-[11px] font-mono uppercase tracking-wider text-stone-600 font-bold mb-1 pl-0.5"
+              >
+                Load (lbs)
+              </label>
+              <div className="relative">
+                <input
+                  id="weight-input"
+                  type="number"
+                  step="any"
+                  min="0"
+                  inputMode="decimal"
+                  placeholder="Load (lbs)"
+                  value={weight}
+                  onChange={(e) => setWeight(e.target.value)}
+                  className="w-full h-14 bg-white border-2 border-stone-300 hover:border-stone-400 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 rounded-xl px-3 font-mono font-bold text-2xl text-center text-zinc-900 placeholder-stone-400 transition-colors shadow-sm cursor-text"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono uppercase text-stone-500 pointer-events-none font-bold">
+                  lbs
+                </span>
+              </div>
             </div>
 
             {/* Reps Input */}
-            <div className="w-24 relative">
-              <input
-                id="reps-input"
-                type="number"
-                min="1"
-                step="1"
-                inputMode="numeric"
-                placeholder="Reps"
-                value={reps}
-                onChange={(e) => setReps(e.target.value)}
-                className="w-full h-14 bg-white border border-stone-300 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 rounded-xl px-3 font-mono font-bold text-2xl text-center text-zinc-900 placeholder-stone-300 transition-colors shadow-xs"
-              />
-              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono uppercase text-stone-400 pointer-events-none font-bold">
-                reps
-              </span>
+            <div className="w-28">
+              <label
+                htmlFor="reps-input"
+                className="block text-[11px] font-mono uppercase tracking-wider text-stone-600 font-bold mb-1 pl-0.5"
+              >
+                Reps
+              </label>
+              <div className="relative">
+                <input
+                  id="reps-input"
+                  type="number"
+                  min="1"
+                  step="1"
+                  inputMode="numeric"
+                  placeholder="Reps"
+                  value={reps}
+                  onChange={(e) => setReps(e.target.value)}
+                  className="w-full h-14 bg-white border-2 border-stone-300 hover:border-stone-400 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 rounded-xl px-3 font-mono font-bold text-2xl text-center text-zinc-900 placeholder-stone-400 transition-colors shadow-sm cursor-text"
+                />
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono uppercase text-stone-500 pointer-events-none font-bold">
+                  reps
+                </span>
+              </div>
             </div>
 
             {/* LOG SET Action Button */}
             <button
               type="submit"
               disabled={isSubmitting}
-              className="h-14 px-6 rounded-xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 text-white font-mono font-bold text-xs uppercase tracking-wider shadow-sm transition-all cursor-pointer disabled:opacity-50"
+              className="h-14 px-5 rounded-xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 text-white font-mono font-bold text-xs uppercase tracking-wider shadow-sm transition-all cursor-pointer disabled:opacity-50 min-w-[96px] flex items-center justify-center"
             >
               LOG SET
             </button>
@@ -394,7 +425,7 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
             type="button"
             onClick={goToPreviousExercise}
             disabled={isFirstExercise}
-            className="text-stone-400 hover:text-zinc-900 disabled:opacity-20 uppercase font-medium transition-colors cursor-pointer"
+            className="h-11 px-3 rounded-xl text-stone-400 hover:text-zinc-900 disabled:opacity-20 uppercase font-medium transition-colors cursor-pointer flex items-center justify-center min-h-[44px]"
           >
             ← Previous
           </button>
@@ -403,15 +434,16 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
             <button
               type="button"
               onClick={handleFinishWorkout}
-              className="text-zinc-900 hover:text-black font-bold uppercase transition-colors cursor-pointer"
+              className="h-11 px-5 rounded-xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 text-white font-mono font-bold uppercase tracking-wider text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer min-h-[44px]"
             >
-              Finish Workout →
+              <span>Finish Workout</span>
+              <span>✓</span>
             </button>
           ) : (
             <button
               type="button"
               onClick={goToNextExercise}
-              className="text-zinc-700 hover:text-zinc-900 font-bold uppercase transition-colors cursor-pointer"
+              className="h-11 px-3 rounded-xl text-zinc-800 hover:text-black font-bold uppercase transition-colors cursor-pointer flex items-center justify-center min-h-[44px]"
             >
               Next Exercise →
             </button>

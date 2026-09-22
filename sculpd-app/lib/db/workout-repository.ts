@@ -12,6 +12,7 @@ import {
   getRoutineBySlug,
   getExercisesForRoutine,
 } from "./routine-repository";
+import { generateUUID } from "@/lib/crypto/uuid";
 
 /**
  * Ensures a valid userId is provided before executing queries.
@@ -122,7 +123,7 @@ export async function startWorkoutSession(
 
   const now = new Date().toISOString();
   const session: WorkoutSession = {
-    id: globalThis.crypto.randomUUID(),
+    id: generateUUID(),
     userId,
     routineId,
     routineName,
@@ -137,7 +138,7 @@ export async function startWorkoutSession(
     await db.workoutSessions.add(session);
 
     const syncItem: SyncQueueItem = {
-      id: globalThis.crypto.randomUUID(),
+      id: generateUUID(),
       userId,
       operation: "insert",
       collection: "workout_sessions",
@@ -171,22 +172,28 @@ export async function completeWorkoutSession(
   const now = new Date().toISOString();
   const updatedSession: WorkoutSession = {
     ...session,
-    completedAt: now,
+    completedAt: session.completedAt || now,
     status: "completed",
-    notes: notes ?? session.notes,
     updatedAt: now,
   };
+
+  const resolvedNotes = notes !== undefined ? notes.trim() : (session.notes || "");
+  if (resolvedNotes) {
+    updatedSession.notes = resolvedNotes;
+  } else {
+    delete (updatedSession as any).notes;
+  }
 
   await db.transaction("rw", [db.workoutSessions, db.syncQueue], async () => {
     await db.workoutSessions.put(updatedSession);
 
     const syncItem: SyncQueueItem = {
-      id: globalThis.crypto.randomUUID(),
+      id: generateUUID(),
       userId,
       operation: "update",
       collection: "workout_sessions",
       entityId: updatedSession.id,
-      payload: updatedSession,
+      payload: JSON.parse(JSON.stringify(updatedSession)),
       timestamp: Date.now(),
       status: "pending",
       attempts: 0,
@@ -223,12 +230,12 @@ export async function cancelWorkoutSession(
     await db.workoutSessions.put(updatedSession);
 
     const syncItem: SyncQueueItem = {
-      id: globalThis.crypto.randomUUID(),
+      id: generateUUID(),
       userId,
       operation: "update",
       collection: "workout_sessions",
       entityId: updatedSession.id,
-      payload: updatedSession,
+      payload: JSON.parse(JSON.stringify(updatedSession)),
       timestamp: Date.now(),
       status: "pending",
       attempts: 0,
@@ -344,7 +351,7 @@ export async function logUserSet(
   const now = new Date().toISOString();
 
   const newSet: WorkoutSet = {
-    id: globalThis.crypto.randomUUID(),
+    id: generateUUID(),
     userId,
     workoutSessionId: sessionId,
     exerciseId,
@@ -360,7 +367,7 @@ export async function logUserSet(
     await db.sets.add(newSet);
 
     const syncItem: SyncQueueItem = {
-      id: globalThis.crypto.randomUUID(),
+      id: generateUUID(),
       userId,
       operation: "insert",
       collection: "sets",
@@ -402,7 +409,7 @@ export async function deleteUserLastSet(
     await db.sets.delete(lastSet.id);
 
     const syncItem: SyncQueueItem = {
-      id: globalThis.crypto.randomUUID(),
+      id: generateUUID(),
       userId,
       operation: "delete",
       collection: "sets",

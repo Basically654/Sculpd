@@ -35,6 +35,7 @@ export default function ExercisePickerModal({
   const [customName, setCustomName] = useState("");
   const [customCategory, setCustomCategory] = useState("Chest");
   const [customEquipment, setCustomEquipment] = useState("Barbell");
+  const [customDescription, setCustomDescription] = useState("");
   const [isCreatingCustom, setIsCreatingCustom] = useState(false);
   const [customError, setCustomError] = useState<string | null>(null);
 
@@ -79,11 +80,13 @@ export default function ExercisePickerModal({
         name: customName.trim(),
         category: customCategory,
         equipment: customEquipment,
+        description: customDescription.trim() || undefined,
       });
 
       onSelectExercise(created);
       setShowCustomForm(false);
       setCustomName("");
+      setCustomDescription("");
       onClose();
     } catch (err: any) {
       setCustomError(err?.message || "Failed to create exercise.");
@@ -217,6 +220,16 @@ export default function ExercisePickerModal({
                   <option value="Bodyweight">Bodyweight</option>
                   <option value="Other">Other</option>
                 </select>
+              </div>
+
+              <div>
+                <input
+                  type="text"
+                  value={customDescription}
+                  onChange={(e) => setCustomDescription(e.target.value)}
+                  placeholder="Description (optional)"
+                  className="w-full h-8 bg-white border border-stone-200 rounded-lg px-2.5 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900"
+                />
               </div>
 
               <button

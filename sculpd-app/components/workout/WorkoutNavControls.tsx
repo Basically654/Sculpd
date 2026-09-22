@@ -79,7 +79,7 @@ export default function WorkoutNavControls({
           <button
             type="button"
             onClick={onFinish}
-            className="h-11 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-black font-mono font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-950/40 transition-all"
+            className="h-11 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-black font-mono font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-950/40 transition-all cursor-pointer"
           >
             <span>Finish Workout</span>
             <svg
@@ -101,7 +101,7 @@ export default function WorkoutNavControls({
           <button
             type="button"
             onClick={onNext}
-            className="h-11 rounded-xl bg-zinc-900 hover:bg-zinc-850 active:scale-[0.98] border border-zinc-800 text-zinc-200 hover:text-white font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all"
+            className="h-11 rounded-xl bg-zinc-900 hover:bg-zinc-850 active:scale-[0.98] border border-zinc-800 text-zinc-200 hover:text-white font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer"
           >
             <span>Next Exercise</span>
             <svg

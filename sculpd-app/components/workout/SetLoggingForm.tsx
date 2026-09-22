@@ -96,13 +96,13 @@ export default function SetLoggingForm({
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        {/* Weight Input */}
+        {/* Weight / Load Input */}
         <div className="space-y-1.5">
           <label
             htmlFor="weight-input"
             className="text-[11px] font-mono uppercase text-zinc-400 font-semibold block"
           >
-            Weight (lbs)
+            Load (lbs)
           </label>
           <div className="flex items-center gap-1">
             <button
@@ -118,7 +118,7 @@ export default function SetLoggingForm({
               step="any"
               min="0"
               inputMode="decimal"
-              placeholder="0"
+              placeholder="Load (lbs)"
               value={weight}
               onChange={(e) => setWeight(e.target.value)}
               className="flex-1 h-11 bg-black border border-zinc-700 rounded-lg text-center font-mono font-bold text-lg text-white focus:outline-none focus:border-emerald-500 transition-colors"

@@ -8,6 +8,7 @@ import {
   SyncQueueItem,
 } from "@/types/models";
 import { getExerciseById, seedExerciseCatalog } from "./exercise-repository";
+import { generateUUID } from "@/lib/crypto/uuid";
 
 /**
  * Ensures a valid userId is provided before executing queries.
@@ -305,7 +306,7 @@ export async function createRoutine(
   const now = new Date().toISOString();
 
   const routine: Routine = {
-    id: globalThis.crypto.randomUUID(),
+    id: generateUUID(),
     userId,
     name: input.name.trim(),
     description: input.description?.trim() || undefined,
@@ -315,7 +316,7 @@ export async function createRoutine(
   };
 
   const configs: RoutineExerciseConfig[] = (input.exercises || []).map((item, index) => ({
-    id: globalThis.crypto.randomUUID(),
+    id: generateUUID(),
     routineId: routine.id,
     exerciseId: item.exerciseId,
     displayOrder: index + 1,
@@ -335,7 +336,7 @@ export async function createRoutine(
 
     // Queue sync mutations
     const routineSyncItem: SyncQueueItem = {
-      id: globalThis.crypto.randomUUID(),
+      id: generateUUID(),
       userId,
       operation: "insert",
       collection: "routines",
@@ -349,7 +350,7 @@ export async function createRoutine(
 
     for (const cfg of configs) {
       const cfgSyncItem: SyncQueueItem = {
-        id: globalThis.crypto.randomUUID(),
+        id: generateUUID(),
         userId,
         operation: "insert",
         collection: "routine_exercises",
@@ -407,7 +408,7 @@ export async function updateRoutine(
 
     // Queue routine update
     const routineSyncItem: SyncQueueItem = {
-      id: globalThis.crypto.randomUUID(),
+      id: generateUUID(),
       userId,
       operation: "update",
       collection: "routines",
@@ -431,7 +432,7 @@ export async function updateRoutine(
         await db.routineExercises.where("routineId").equals(routineId).delete();
         for (const oldCfg of existingConfigs) {
           const delSync: SyncQueueItem = {
-            id: globalThis.crypto.randomUUID(),
+            id: generateUUID(),
             userId,
             operation: "delete",
             collection: "routine_exercises",
@@ -447,7 +448,7 @@ export async function updateRoutine(
 
       // Add new configurations with proper displayOrder
       const newConfigs: RoutineExerciseConfig[] = input.exercises.map((item, index) => ({
-        id: item.id || globalThis.crypto.randomUUID(),
+        id: item.id || generateUUID(),
         routineId,
         exerciseId: item.exerciseId,
         displayOrder: index + 1,
@@ -463,7 +464,7 @@ export async function updateRoutine(
         await db.routineExercises.bulkAdd(newConfigs);
         for (const cfg of newConfigs) {
           const addSync: SyncQueueItem = {
-            id: globalThis.crypto.randomUUID(),
+            id: generateUUID(),
             userId,
             operation: "insert",
             collection: "routine_exercises",
@@ -501,7 +502,7 @@ export async function deleteRoutine(userId: string, routineId: string): Promise<
 
     // Queue sync deletions
     const routineDel: SyncQueueItem = {
-      id: globalThis.crypto.randomUUID(),
+      id: generateUUID(),
       userId,
       operation: "delete",
       collection: "routines",
@@ -515,7 +516,7 @@ export async function deleteRoutine(userId: string, routineId: string): Promise<
 
     for (const cfg of configs) {
       const cfgDel: SyncQueueItem = {
-        id: globalThis.crypto.randomUUID(),
+        id: generateUUID(),
         userId,
         operation: "delete",
         collection: "routine_exercises",
@@ -560,7 +561,7 @@ export async function reorderRoutineExercises(
         await db.routineExercises.put(updatedCfg);
 
         const syncItem: SyncQueueItem = {
-          id: globalThis.crypto.randomUUID(),
+          id: generateUUID(),
           userId,
           operation: "update",
           collection: "routine_exercises",

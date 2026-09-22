@@ -15,7 +15,7 @@ interface FinishWorkoutModalProps {
 export default function FinishWorkoutModal({
   isOpen,
   routine,
-  sets,
+  sets = [],
   onConfirm,
   onCancel,
 }: FinishWorkoutModalProps) {
@@ -24,9 +24,10 @@ export default function FinishWorkoutModal({
 
   if (!isOpen) return null;
 
-  // Calculate quick summary metrics
-  const totalSets = sets.length;
-  const uniqueExercises = new Set(sets.map((s) => s.exerciseId)).size;
+  // Calculate quick summary metrics safely
+  const safeSets = sets || [];
+  const totalSets = safeSets.length;
+  const uniqueExercises = new Set(safeSets.map((s) => s.exerciseId)).size;
 
   const handleFinish = async () => {
     try {

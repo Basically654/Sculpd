@@ -282,7 +282,7 @@ export default function WorkoutBuilder({ routineId }: WorkoutBuilderProps) {
 
           <div>
             <label className="block text-[11px] font-mono uppercase text-zinc-500 font-bold mb-1.5">
-              Description / Focus <span className="text-zinc-400 font-normal">(Optional)</span>
+              Description (optional)
             </label>
             <input
               type="text"

@@ -2,6 +2,7 @@
 import { db } from "./index";
 import { User, SafeUser, AvatarColor, SyncQueueItem } from "@/types/models";
 import { hashPin, verifyPin } from "@/lib/crypto/pin";
+import { generateUUID } from "@/lib/crypto/uuid";
 
 /**
  * Strips sensitive cryptographic fields from a User object before returning to UI.
@@ -58,7 +59,7 @@ export async function createUser(input: CreateUserInput): Promise<SafeUser> {
 
   const { pinHash, pinSalt } = await hashPin(trimmedPin);
   const now = new Date().toISOString();
-  const userId = globalThis.crypto.randomUUID();
+  const userId = generateUUID();
 
   const newUser: User = {
     id: userId,
@@ -75,7 +76,7 @@ export async function createUser(input: CreateUserInput): Promise<SafeUser> {
 
     // Queue for cloud sync
     const syncItem: SyncQueueItem = {
-      id: globalThis.crypto.randomUUID(),
+      id: generateUUID(),
       userId: newUser.id,
       operation: "insert",
       collection: "users",
