@@ -1,6 +1,7 @@
 {
   "name": "Sculp’d",
   "short_name": "Sculp’d",
+  "id": "/",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",

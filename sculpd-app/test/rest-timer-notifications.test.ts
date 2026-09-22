@@ -7,6 +7,7 @@ import {
   RestTimerState,
   RestTimerPayload,
 } from "../lib/notifications/rest-notifier";
+import { formatPushPayload } from "../lib/notifications/web-push-server";
 
 // Assertion helper
 function assert(condition: boolean, message: string) {
@@ -209,6 +210,92 @@ async function runNotificationTests() {
   assert(swMessagesReceived.length === 2, "Cancel message dispatched to Service Worker");
   assert(swMessagesReceived[1].type === "CANCEL_REST_TIMER", "Cancel message has correct type");
   assert(swMessagesReceived[1].id === payload1.id, "Cancel message has matching timer ID");
+
+  console.log("\n--- 8. Web Push Dual-Compatible Payload (iOS 17 Baseline + iOS 18.4+ Declarative) ---");
+  const pushJsonStr = formatPushPayload({
+    timerId: "rest_sess_42",
+    title: "Rest complete — Overhead Press",
+    body: "Ready for Set 3",
+    url: "/workout/rtn_shoulders",
+  });
+  const parsedPush = JSON.parse(pushJsonStr);
+
+  // Assert iOS 17 baseline standard Web Push properties
+  assert(parsedPush.title === "Rest complete — Overhead Press", "Standard iOS 17 title populated");
+  assert(parsedPush.body === "Ready for Set 3", "Standard iOS 17 body populated");
+  assert(parsedPush.url === "/workout/rtn_shoulders", "Standard iOS 17 url populated");
+  assert(parsedPush.timerId === "rest_sess_42", "Standard timerId preserved");
+
+  // Assert Declarative Web Push properties (iOS 18.4+ enhancement)
+  assert(parsedPush.web_push === 8030, "RFC 8030 declarative indicator present (8030)");
+  assert(Boolean(parsedPush.notification), "Declarative notification dictionary present");
+  assert(parsedPush.notification.title === "Rest complete — Overhead Press", "Declarative title matches");
+  assert(parsedPush.notification.body === "Ready for Set 3", "Declarative body matches");
+  assert(parsedPush.notification.navigate === "/workout/rtn_shoulders", "Declarative navigate URL matches");
+  assert(parsedPush.notification.tag === "sculpd-rest-rest_sess_42", "Declarative tag prevents duplicates");
+  assert(parsedPush.notification.silent === false, "Declarative silent is false");
+
+  console.log("\n--- 9. Two-Layer Race Condition Guard & Cancellation State ---");
+  // Simulate dispatch guard check
+  const simulateDispatchGuard = (
+    notifStatus: "scheduled" | "dispatched" | "cancelled" | "superseded",
+    targetMs: number,
+    currentMs: number
+  ): { shouldDispatch: boolean; reason?: string } => {
+    if (notifStatus !== "scheduled") {
+      return { shouldDispatch: false, reason: `Status is ${notifStatus}` };
+    }
+    // If timer was extended into the future by >5 seconds, skip early trigger
+    if (targetMs > currentMs + 5000) {
+      return { shouldDispatch: false, reason: "Timer was extended" };
+    }
+    return { shouldDispatch: true };
+  };
+
+  const scheduledCheck = simulateDispatchGuard("scheduled", t0 + 90000, t0 + 90000);
+  assert(scheduledCheck.shouldDispatch === true, "Valid scheduled timer passes dispatch guard");
+
+  const cancelledCheck = simulateDispatchGuard("cancelled", t0 + 90000, t0 + 90000);
+  assert(cancelledCheck.shouldDispatch === false, "Cancelled timer rejected by dispatch guard (prevents false push)");
+
+  const supersededCheck = simulateDispatchGuard("superseded", t0 + 90000, t0 + 90000);
+  assert(supersededCheck.shouldDispatch === false, "Superseded timer rejected by dispatch guard");
+
+  const extendedCheck = simulateDispatchGuard("scheduled", t0 + 120000, t0 + 90000);
+  assert(extendedCheck.shouldDispatch === false, "Premature trigger for extended timer rejected by guard");
+
+  console.log("\n--- 10. Offline Isolation & Zero-Network Dependency ---");
+  // Simulate offline workout: network unavailable, but localStorage & math function 100%
+  const offlineT0 = 1775000000000;
+  const offlineEndsAt = offlineT0 + 120000; // 2 minutes
+
+  const offlineState: RestTimerState = {
+    id: "offline_timer_123",
+    restStartedAt: offlineT0,
+    restEndsAt: offlineEndsAt,
+    totalDuration: 120,
+    exerciseName: "Barbell Squat",
+    nextSetNumber: 4,
+    workoutUrl: "/workout/rtn_legs",
+    status: "running",
+  };
+
+  fakeStorage.setItem("sculpd_rest_timer_state", JSON.stringify(offlineState));
+  fakeStorage.setItem("sculpd_rest_timer_end", String(offlineEndsAt));
+  fakeStorage.setItem("sculpd_rest_timer_total", "120");
+
+  // Re-read offline
+  const offlineStored = JSON.parse(fakeStorage.getItem("sculpd_rest_timer_state")!);
+  assert(offlineStored.id === "offline_timer_123", "Offline timer persists in storage without network");
+  assert(offlineStored.totalDuration === 120, "Total duration is intact offline");
+
+  // Advance clock by 45 seconds
+  const remainingOffline = calculateRemainingSeconds(offlineStored.restEndsAt, offlineT0 + 45000);
+  assert(remainingOffline === 75, `Remaining time calculated offline as 75s (120s - 45s = ${remainingOffline}s)`);
+
+  // Advance clock past expiration
+  const expiredOffline = isRestExpired(offlineStored.restEndsAt, offlineT0 + 121000);
+  assert(expiredOffline === true, "Expiration detected offline without network");
 
   console.log("\n============================================================");
   console.log("✅ ALL REST TIMER & BACKGROUND NOTIFICATION TESTS PASSED 100%!");

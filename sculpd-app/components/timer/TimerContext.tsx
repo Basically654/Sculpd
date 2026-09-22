@@ -19,6 +19,7 @@ import {
   isRestExpired,
   RestTimerState,
 } from "@/lib/notifications/rest-notifier";
+import { useUser } from "@/components/auth/UserContext";
 
 export const STORAGE_REST_TIMER_STATE = "sculpd_rest_timer_state";
 export const STORAGE_END_KEY = "sculpd_rest_timer_end";
@@ -65,6 +66,20 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
   const scheduledTimerIdRef = useRef<string | null>(null);
   const intervalRef = useRef<number | null>(null);
 
+  // Safely access authenticated session token if available
+  let userCtx: any = null;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    userCtx = useUser();
+  } catch {
+    userCtx = null;
+  }
+  const sessionToken = userCtx?.sessionToken || null;
+  const sessionTokenRef = useRef<string | null>(sessionToken);
+  useEffect(() => {
+    sessionTokenRef.current = sessionToken;
+  }, [sessionToken]);
+
   // Initialize service worker on client startup
   useEffect(() => {
     initServiceWorker().catch(() => {});
@@ -85,7 +100,7 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
     setRemaining(0);
     setTimerId(undefined);
 
-    cancelRestNotification(idToCancel || undefined).catch(() => {});
+    cancelRestNotification(idToCancel || undefined, sessionTokenRef.current).catch(() => {});
 
     if (typeof window !== "undefined") {
       localStorage.removeItem(STORAGE_REST_TIMER_STATE);
@@ -168,8 +183,13 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
       // Request notification permission non-intrusively
       requestNotificationPermission().catch(() => {});
 
-      // Dispatch background notification to Service Worker with stable identifier
-      scheduleRestNotification(stateObj).catch(() => {});
+      // Dispatch background notification to Service Worker and server scheduler
+      scheduleRestNotification(
+        stateObj,
+        undefined,
+        undefined,
+        sessionTokenRef.current
+      ).catch(() => {});
 
       // Local UI update interval
       intervalRef.current = window.setInterval(tick, 250);
@@ -228,7 +248,12 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
         localStorage.setItem(STORAGE_END_KEY, String(newTargetMs));
 
         // Re-schedule notification with updated target timestamp using same ID
-        scheduleRestNotification(updatedState).catch(() => {});
+        scheduleRestNotification(
+          updatedState,
+          undefined,
+          undefined,
+          sessionTokenRef.current
+        ).catch(() => {});
       }
     },
     [isActive, exerciseName, nextSetNumber, workoutUrl, totalDuration]

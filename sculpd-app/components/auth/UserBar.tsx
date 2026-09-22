@@ -1,10 +1,17 @@
 // components/auth/UserBar.tsx
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useUser } from "./UserContext";
 import { useSync } from "@/lib/sync/use-sync";
 import { AvatarColor } from "@/types/models";
+import {
+  isPushSupported,
+  getCurrentPushSubscription,
+  subscribeUserToPush,
+  unsubscribeUserFromPush,
+  isStandalonePWA,
+} from "@/lib/notifications/rest-notifier";
 
 const BADGE_COLOR_MAP: Record<AvatarColor, { border: string; bg: string; text: string }> = {
   emerald: { border: "border-emerald-200", bg: "bg-emerald-50", text: "text-emerald-800" },
@@ -19,6 +26,47 @@ const BADGE_COLOR_MAP: Record<AvatarColor, { border: string; bg: string; text: s
 export default function UserBar() {
   const { activeUserId, activeUser, sessionToken, switchUser } = useUser();
   const { syncState, pendingCount, triggerSync } = useSync(activeUserId, sessionToken);
+
+  const [hasPushSupport, setHasPushSupport] = useState<boolean>(false);
+  const [isPushActive, setIsPushActive] = useState<boolean>(false);
+  const [isPushLoading, setIsPushLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    const supported = isPushSupported();
+    setHasPushSupport(supported);
+    if (supported) {
+      getCurrentPushSubscription().then((sub) => {
+        setIsPushActive(Boolean(sub));
+      });
+    }
+  }, [activeUserId]);
+
+  const handleTogglePush = async () => {
+    if (!sessionToken || isPushLoading) return;
+    setIsPushLoading(true);
+
+    try {
+      if (isPushActive) {
+        await unsubscribeUserFromPush(sessionToken);
+        setIsPushActive(false);
+      } else {
+        const res = await subscribeUserToPush(sessionToken);
+        if (res.success) {
+          setIsPushActive(true);
+        } else if (res.error) {
+          if (!isStandalonePWA() && /iphone|ipad|ipod/i.test(navigator.userAgent)) {
+            alert(
+              "On iOS, Web Push requires adding Sculp'd to your Home Screen first (Share → Add to Home Screen)."
+            );
+          } else {
+            alert(res.error);
+          }
+        }
+      }
+    } finally {
+      setIsPushLoading(false);
+    }
+  };
 
   if (!activeUser) return null;
 
@@ -75,13 +123,35 @@ export default function UserBar() {
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={switchUser}
-        className="text-xs font-medium text-zinc-600 hover:text-zinc-900 bg-white hover:bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1 shadow-xs transition-colors cursor-pointer"
-      >
-        Switch
-      </button>
+      <div className="flex items-center gap-1.5">
+        {hasPushSupport && (
+          <button
+            type="button"
+            onClick={handleTogglePush}
+            disabled={isPushLoading}
+            title={
+              isPushActive
+                ? "Rest Push Alerts Active (tap to disable)"
+                : "Enable Lock Screen Rest Alerts"
+            }
+            className={`flex items-center gap-1 text-[10px] font-mono font-medium px-2 py-1 rounded-lg border transition-colors cursor-pointer ${
+              isPushActive
+                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                : "bg-stone-50 text-stone-600 hover:text-zinc-900 border-stone-200"
+            }`}
+          >
+            <span>{isPushActive ? "🔔 Alerts on" : "🔕 Alerts off"}</span>
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={switchUser}
+          className="text-xs font-medium text-zinc-600 hover:text-zinc-900 bg-white hover:bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1 shadow-xs transition-colors cursor-pointer"
+        >
+          Switch
+        </button>
+      </div>
     </div>
   );
 }

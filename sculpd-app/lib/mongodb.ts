@@ -6,6 +6,8 @@ import {
   Exercise,
   WorkoutSession,
   WorkoutSet,
+  PushSubscriptionRecord,
+  RestNotificationRecord,
 } from "@/types/models";
 
 declare global {
@@ -79,6 +81,16 @@ export async function getSetsCollection(): Promise<Collection<WorkoutSet>> {
   return db.collection<WorkoutSet>("sets");
 }
 
+export async function getPushSubscriptionsCollection(): Promise<Collection<PushSubscriptionRecord>> {
+  const db = await getDatabase();
+  return db.collection<PushSubscriptionRecord>("push_subscriptions");
+}
+
+export async function getRestNotificationsCollection(): Promise<Collection<RestNotificationRecord>> {
+  const db = await getDatabase();
+  return db.collection<RestNotificationRecord>("rest_notifications");
+}
+
 let indexesEnsured = false;
 
 /**
@@ -109,6 +121,16 @@ export async function ensureMongoIndexes(): Promise<void> {
     await sets.createIndex({ userId: 1, workoutSessionId: 1 });
     await sets.createIndex({ userId: 1, exerciseId: 1 });
     await sets.createIndex({ userId: 1, updatedAt: 1 });
+
+    const pushSubscriptions = await getPushSubscriptionsCollection();
+    await pushSubscriptions.createIndex({ id: 1 }, { unique: true });
+    await pushSubscriptions.createIndex({ userId: 1 });
+    await pushSubscriptions.createIndex({ endpoint: 1 }, { unique: true });
+
+    const restNotifications = await getRestNotificationsCollection();
+    await restNotifications.createIndex({ id: 1 }, { unique: true });
+    await restNotifications.createIndex({ userId: 1, status: 1 });
+    await restNotifications.createIndex({ scheduledFor: 1 });
 
     indexesEnsured = true;
   } catch (err) {

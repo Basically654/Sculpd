@@ -183,3 +183,42 @@ export interface SyncMeta {
   lastSyncTimestamp: number;
   updatedAt: string;
 }
+
+/**
+ * Web Push Subscription persisted in MongoDB per user device.
+ */
+export interface PushSubscriptionRecord {
+  id: string; // UUIDv4
+  userId: string; // Foreign key to User.id
+  endpoint: string; // Browser/APNs gateway endpoint URL
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+  userAgent?: string;
+  createdAt: string; // ISO 8601
+  updatedAt: string; // ISO 8601
+}
+
+export type RestNotificationStatus =
+  | "scheduled"
+  | "dispatched"
+  | "cancelled"
+  | "superseded";
+
+/**
+ * Scheduled rest notification record stored in MongoDB.
+ */
+export interface RestNotificationRecord {
+  id: string; // timerId
+  userId: string; // Foreign key to User.id
+  workoutSessionId?: string;
+  exerciseName?: string;
+  nextSetNumber?: number;
+  workoutUrl?: string;
+  scheduledFor: number; // Target epoch ms
+  qstashMessageId?: string;
+  status: RestNotificationStatus;
+  createdAt: string; // ISO 8601
+  updatedAt: string; // ISO 8601
+}
