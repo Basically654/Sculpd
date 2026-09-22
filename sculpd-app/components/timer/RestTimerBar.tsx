@@ -2,10 +2,17 @@
 "use client";
 
 import React from "react";
+import { usePathname } from "next/navigation";
 import { useTimer } from "./TimerContext";
 
 export default function RestTimerBar() {
+  const pathname = usePathname();
   const { remaining, totalDuration, isActive, skip, addTime } = useTimer();
+
+  // If currently on an active workout screen, the dominant rest view takes over
+  if (pathname?.startsWith("/workout")) {
+    return null;
+  }
 
   if (!isActive && remaining === 0) return null;
 

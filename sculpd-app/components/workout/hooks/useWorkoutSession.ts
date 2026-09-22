@@ -18,9 +18,12 @@ import {
   logUserSet,
   deleteUserLastSet,
   getUserPreviousSet,
+  getUserPreviousSetsForExercise,
+  getUserSetsForExercise,
 } from "@/lib/db/workout-repository";
 import { useTimer } from "@/components/timer/TimerContext";
 import { pushPendingMutations } from "@/lib/sync/sync-client";
+import { detectPersonalRecord, PRResult } from "@/lib/pr/pr-detector";
 
 interface UseWorkoutSessionOptions {
   routineSlug: string;
@@ -41,8 +44,15 @@ export function useWorkoutSession({
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Previous performance tracking
   const [previousSet, setPreviousSet] = useState<WorkoutSet | null>(null);
+  const [previousSessionSets, setPreviousSessionSets] = useState<WorkoutSet[]>([]);
   const [isLoadingPrevious, setIsLoadingPrevious] = useState<boolean>(false);
+
+  // PR Celebration State
+  const [activePR, setActivePR] = useState<PRResult | null>(null);
+  const [prsHit, setPrsHit] = useState<PRResult[]>([]);
 
   // Storage key for keeping exercise index sticky per session
   const sessionIndexStorageKey = useMemo(() => {
@@ -64,7 +74,7 @@ export function useWorkoutSession({
       setError(null);
 
       try {
-        // Ensure catalog is seeded (outside liveQuery)
+        // Ensure catalog is seeded outside liveQuery
         await seedDefaultCatalog();
 
         // Fetch routine by slug from IndexedDB
@@ -136,7 +146,6 @@ export function useWorkoutSession({
   }, [routineSlug, userId]);
 
   // 2. Real-time Live Query for sets logged in this session
-  // Dexie React hooks automatically update when db.sets is modified
   const sessionSets = useLiveQuery(
     async () => {
       if (!userId || !session) return [];
@@ -161,21 +170,25 @@ export function useWorkoutSession({
     return sessionSets.filter((s) => s.exerciseId === currentExercise.id);
   }, [sessionSets, currentExercise]);
 
-  // 3. Query Previous Performance for the Current Exercise
-  // Strictly isolates to active user and excludes current workout session
+  // 3. Query Previous Performance for Current Exercise
   useEffect(() => {
     if (!userId || !currentExercise || !session) {
       setPreviousSet(null);
+      setPreviousSessionSets([]);
       return;
     }
 
     let isMounted = true;
     setIsLoadingPrevious(true);
 
-    getUserPreviousSet(userId, currentExercise.id, session.id)
-      .then((prev) => {
+    Promise.all([
+      getUserPreviousSet(userId, currentExercise.id, session.id),
+      getUserPreviousSetsForExercise(userId, currentExercise.id, session.id),
+    ])
+      .then(([prevSingle, prevSets]) => {
         if (isMounted) {
-          setPreviousSet(prev || null);
+          setPreviousSet(prevSingle || null);
+          setPreviousSessionSets(prevSets);
           setIsLoadingPrevious(false);
         }
       })
@@ -183,6 +196,7 @@ export function useWorkoutSession({
         console.warn("Failed to query previous performance:", err);
         if (isMounted) {
           setPreviousSet(null);
+          setPreviousSessionSets([]);
           setIsLoadingPrevious(false);
         }
       });
@@ -213,7 +227,7 @@ export function useWorkoutSession({
     goToExercise(currentExerciseIndex - 1);
   }, [goToExercise, currentExerciseIndex]);
 
-  // 5. Log a set
+  // 5. Log a set with PR Detection and Dominant Rest Trigger
   const logSet = useCallback(
     async (weight: number, reps: number, rpe?: number | null) => {
       if (!userId || !session || !currentExercise) {
@@ -233,6 +247,21 @@ export function useWorkoutSession({
         throw new Error("Please enter a valid number of reps (positive integer).");
       }
 
+      // Check for PR before inserting (query all prior sets excluding current session)
+      const allHistoricalSets = await getUserSetsForExercise(
+        userId,
+        currentExercise.id
+      );
+      const priorHistoricalSets = allHistoricalSets.filter(
+        (s) => s.workoutSessionId !== session.id
+      );
+
+      const prCheck = detectPersonalRecord(
+        { weight, reps },
+        currentExercise.name,
+        priorHistoricalSets
+      );
+
       // 1. Immediately write to IndexedDB
       const newSet = await logUserSet(
         userId,
@@ -243,14 +272,21 @@ export function useWorkoutSession({
         rpe
       );
 
-      // 2. Start rest timer immediately (90s default)
+      // 2. If PR detected, trigger accomplishment overlay and track in session
+      if (prCheck.isPR) {
+        setActivePR(prCheck);
+        setPrsHit((prev) => [...prev, prCheck]);
+      }
+
+      // 3. Start Rest Timer immediately (dominant rest state)
       try {
-        timer.start(90);
+        const nextSetNum = currentExerciseSets.length + 2;
+        timer.start(90, currentExercise.name, nextSetNum);
       } catch (timerErr) {
         console.warn("Could not start rest timer:", timerErr);
       }
 
-      // 3. Asynchronously trigger background cloud sync (never blocks the UI)
+      // 4. Asynchronously trigger background cloud sync
       if (sessionToken) {
         pushPendingMutations(userId, sessionToken).catch((syncErr) => {
           console.warn("Background sync warning:", syncErr);
@@ -259,10 +295,10 @@ export function useWorkoutSession({
 
       return newSet;
     },
-    [userId, session, currentExercise, timer, sessionToken]
+    [userId, session, currentExercise, currentExerciseSets.length, timer, sessionToken]
   );
 
-  // 6. Delete the most recently logged set for this exercise
+  // 6. Delete last logged set
   const deleteLastSet = useCallback(async () => {
     if (!userId || !session || !currentExercise) return false;
 
@@ -326,6 +362,10 @@ export function useWorkoutSession({
     }
   }, [userId, session, sessionIndexStorageKey, sessionToken]);
 
+  const dismissPR = useCallback(() => {
+    setActivePR(null);
+  }, []);
+
   return {
     routine,
     exercises,
@@ -335,6 +375,9 @@ export function useWorkoutSession({
     currentExercise,
     currentExerciseSets,
     previousSet,
+    previousSessionSets,
+    activePR,
+    prsHit,
     isLoading,
     isLoadingPrevious,
     error,
@@ -347,5 +390,6 @@ export function useWorkoutSession({
     deleteLastSet,
     finishWorkout,
     cancelWorkout,
+    dismissPR,
   };
 }
