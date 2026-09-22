@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { TimerProvider } from "@/components/timer/TimerContext";
 import RestTimerBar from "@/components/timer/RestTimerBar";
+import { UserProvider } from "@/components/auth/UserContext";
 
 // 1. Deny elastic responsive layouts (Kills iOS input auto-zoom anomalies)
 export const viewport: Viewport = {
@@ -64,10 +65,12 @@ export default function RootLayout({
       className="h-full bg-black text-white antialiased overflow-hidden select-none touch-none"
     >
       <body className="h-full w-full overflow-y-auto webkit-overflow-scrolling-touch">
-        <TimerProvider>
-          {children}
-          <RestTimerBar />
-        </TimerProvider>
+        <UserProvider>
+          <TimerProvider>
+            {children}
+            <RestTimerBar />
+          </TimerProvider>
+        </UserProvider>
       </body>
     </html>
   );

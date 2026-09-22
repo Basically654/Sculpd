@@ -6,10 +6,17 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:phase2": "tsx test/phase2-identity-isolation.test.ts",
+    "test:phase3": "tsx test/phase3-sync-engine.test.ts",
+    "test:phase4": "tsx test/phase4-gym-floor-workout.test.ts",
+    "test": "tsx test/phase2-identity-isolation.test.ts && tsx test/phase3-sync-engine.test.ts && tsx test/phase4-gym-floor-workout.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.0",
+    "dexie": "^4.4.6",
+    "dexie-react-hooks": "^4.4.0",
+    "mongodb": "^7.6.0",
     "next": "16.2.10",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -23,7 +30,9 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "fake-indexeddb": "^6.2.5",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }
