@@ -211,8 +211,8 @@ export default function WorkoutBuilder({ routineId }: WorkoutBuilderProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-4">
-        <div className="w-8 h-8 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin mb-4" />
+      <div className="min-h-screen bg-[#fafaf8] text-zinc-900 flex flex-col items-center justify-center p-4">
+        <div className="w-8 h-8 rounded-full border-2 border-zinc-800 border-t-transparent animate-spin mb-4" />
         <p className="text-xs font-mono uppercase tracking-widest text-zinc-500">
           Loading Workout Builder...
         </p>
@@ -221,13 +221,13 @@ export default function WorkoutBuilder({ routineId }: WorkoutBuilderProps) {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white p-4 font-sans flex flex-col justify-between pb-8 max-w-md mx-auto w-full">
+    <main className="min-h-screen bg-[#fafaf8] text-zinc-900 p-4 font-sans flex flex-col justify-between pb-8 max-w-md mx-auto w-full">
       <div>
         {/* Navigation Bar */}
         <div className="flex items-center justify-between py-2 mb-4">
           <Link
             href="/"
-            className="text-xs font-mono uppercase text-zinc-500 hover:text-zinc-300 flex items-center gap-1 transition-colors"
+            className="text-xs font-mono uppercase text-zinc-500 hover:text-zinc-900 flex items-center gap-1 transition-colors"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -242,7 +242,7 @@ export default function WorkoutBuilder({ routineId }: WorkoutBuilderProps) {
             <span>Cancel</span>
           </Link>
 
-          <h1 className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-400">
+          <h1 className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-600">
             {routineId ? "Edit Workout" : "New Workout"}
           </h1>
 
@@ -251,7 +251,7 @@ export default function WorkoutBuilder({ routineId }: WorkoutBuilderProps) {
               type="button"
               onClick={handleDelete}
               disabled={isDeleting}
-              className="text-xs font-mono uppercase text-rose-500 hover:text-rose-400 transition-colors"
+              className="text-xs font-mono uppercase text-red-600 hover:text-red-700 font-semibold transition-colors cursor-pointer"
             >
               {isDeleting ? "Deleting..." : "Delete"}
             </button>
@@ -259,7 +259,7 @@ export default function WorkoutBuilder({ routineId }: WorkoutBuilderProps) {
         </div>
 
         {error && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-950/40 border border-rose-900/60 text-xs text-rose-400 font-mono">
+          <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-mono">
             {error}
           </div>
         )}
@@ -267,7 +267,7 @@ export default function WorkoutBuilder({ routineId }: WorkoutBuilderProps) {
         {/* Workout Info Fields */}
         <form id="workout-builder-form" onSubmit={handleSave} className="space-y-4">
           <div>
-            <label className="block text-[11px] font-mono uppercase text-zinc-400 font-bold mb-1.5">
+            <label className="block text-[11px] font-mono uppercase text-zinc-500 font-bold mb-1.5">
               Workout Name
             </label>
             <input
@@ -275,34 +275,34 @@ export default function WorkoutBuilder({ routineId }: WorkoutBuilderProps) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Chest & Triceps Focus, Upper Power"
-              className="w-full h-11 bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 text-sm font-bold text-white placeholder-zinc-600 focus:outline-none focus:border-emerald-500"
+              className="w-full h-11 bg-white border border-stone-200 rounded-xl px-3.5 text-sm font-bold text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 shadow-xs transition-colors"
               autoFocus={!routineId}
             />
           </div>
 
           <div>
-            <label className="block text-[11px] font-mono uppercase text-zinc-400 font-bold mb-1.5">
-              Description / Focus <span className="text-zinc-600 font-normal">(Optional)</span>
+            <label className="block text-[11px] font-mono uppercase text-zinc-500 font-bold mb-1.5">
+              Description / Focus <span className="text-zinc-400 font-normal">(Optional)</span>
             </label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g. Hypertrophy focus with 90s rest intervals"
-              className="w-full h-9 bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 text-xs text-zinc-300 placeholder-zinc-600 focus:outline-none focus:border-emerald-500"
+              className="w-full h-9 bg-white border border-stone-200 rounded-xl px-3.5 text-xs text-zinc-800 placeholder-zinc-400 focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 shadow-xs transition-colors"
             />
           </div>
 
           {/* Exercise List */}
           <div className="pt-2">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400">
+              <h2 className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-500">
                 Exercises ({exercises.length})
               </h2>
               <button
                 type="button"
                 onClick={() => setIsPickerOpen(true)}
-                className="text-xs font-mono uppercase text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1"
+                className="text-xs font-mono uppercase text-zinc-900 hover:text-black font-bold flex items-center gap-1 transition-colors cursor-pointer"
               >
                 + Add Exercise
               </button>
@@ -311,13 +311,13 @@ export default function WorkoutBuilder({ routineId }: WorkoutBuilderProps) {
             {exercises.length === 0 ? (
               <div
                 onClick={() => setIsPickerOpen(true)}
-                className="p-8 rounded-2xl border-2 border-dashed border-zinc-800 hover:border-zinc-700 bg-zinc-950/40 text-center cursor-pointer transition-colors"
+                className="p-8 rounded-2xl border-2 border-dashed border-stone-300 hover:border-stone-400 bg-stone-50/50 text-center cursor-pointer transition-colors"
               >
-                <p className="text-sm font-bold text-zinc-300 mb-1">No exercises added yet</p>
+                <p className="text-sm font-bold text-zinc-800 mb-1">No exercises added yet</p>
                 <p className="text-xs text-zinc-500 font-mono mb-3">
                   Select movements from the catalog or create custom exercises
                 </p>
-                <span className="inline-block px-3.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono uppercase font-bold">
+                <span className="inline-block px-3.5 py-1.5 rounded-lg bg-white border border-stone-200 text-zinc-800 text-xs font-mono uppercase font-bold shadow-xs">
                   + Browse Exercise Library
                 </span>
               </div>
@@ -339,7 +339,7 @@ export default function WorkoutBuilder({ routineId }: WorkoutBuilderProps) {
                 <button
                   type="button"
                   onClick={() => setIsPickerOpen(true)}
-                  className="w-full py-3 rounded-xl border border-dashed border-zinc-800 hover:border-zinc-700 bg-zinc-950 text-xs font-mono uppercase text-zinc-400 hover:text-white flex items-center justify-center gap-1 transition-colors"
+                  className="w-full py-3 rounded-xl border border-dashed border-stone-300 hover:border-stone-400 bg-white text-xs font-mono uppercase text-zinc-600 hover:text-zinc-900 flex items-center justify-center gap-1 transition-colors shadow-xs cursor-pointer"
                 >
                   + Add Another Exercise
                 </button>
@@ -355,21 +355,19 @@ export default function WorkoutBuilder({ routineId }: WorkoutBuilderProps) {
           type="submit"
           form="workout-builder-form"
           disabled={isSaving || !name.trim() || exercises.length === 0}
-          className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:pointer-events-none text-black font-mono font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-lg shadow-emerald-950/40 cursor-pointer"
+          className="w-full h-12 rounded-xl bg-zinc-900 hover:bg-zinc-800 disabled:opacity-40 disabled:pointer-events-none text-white font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-sm cursor-pointer"
         >
           {isSaving ? "Saving Workout..." : routineId ? "Save Changes" : "Create Workout"}
         </button>
       </div>
 
       {/* Exercise Picker Modal */}
-      {activeUserId && (
-        <ExercisePickerModal
-          isOpen={isPickerOpen}
-          onClose={() => setIsPickerOpen(false)}
-          onSelectExercise={handleSelectExercise}
-          userId={activeUserId}
-        />
-      )}
+      <ExercisePickerModal
+        isOpen={isPickerOpen}
+        onClose={() => setIsPickerOpen(false)}
+        onSelectExercise={handleSelectExercise}
+        userId={activeUserId || ""}
+      />
     </main>
   );
 }

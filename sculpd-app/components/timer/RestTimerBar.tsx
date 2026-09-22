@@ -29,23 +29,23 @@ export default function RestTimerBar() {
       className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[94%] max-w-md z-50 pointer-events-auto transition-all"
     >
       <div
-        className={`flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border border-emerald-500/50 bg-zinc-950/95 backdrop-blur-md shadow-2xl shadow-emerald-950/40 ${
-          remaining === 0 ? "animate-pulse border-emerald-400" : ""
+        className={`flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border border-stone-200 bg-white/95 backdrop-blur-md shadow-lg ${
+          remaining === 0 ? "ring-2 ring-zinc-900 animate-pulse" : ""
         }`}
       >
         <div className="flex flex-col min-w-[56px]">
-          <span className="text-[10px] uppercase font-mono tracking-wider text-zinc-400">
+          <span className="text-[10px] uppercase font-mono tracking-wider text-zinc-400 font-semibold">
             Rest
           </span>
-          <span className="text-base font-mono font-black text-emerald-400">
+          <span className="text-base font-mono font-bold text-zinc-900">
             {mins > 0 ? `${mins}:${secs.toString().padStart(2, "0")}` : `${secs}s`}
           </span>
         </div>
 
-        <div className="flex-1 bg-zinc-900 h-2 rounded-full overflow-hidden mx-1 border border-zinc-800">
+        <div className="flex-1 bg-stone-100 h-2 rounded-full overflow-hidden mx-1 border border-stone-200">
           <div
             style={{ width: `${progressPercent}%` }}
-            className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300"
+            className="h-full bg-zinc-900 transition-all duration-300"
           />
         </div>
 
@@ -53,7 +53,7 @@ export default function RestTimerBar() {
           <button
             type="button"
             onClick={() => addTime(30)}
-            className="text-[11px] font-mono font-bold text-zinc-300 hover:text-white bg-zinc-800/80 hover:bg-zinc-700 active:scale-95 px-2.5 py-1 rounded-md transition-all"
+            className="text-[11px] font-mono font-bold text-zinc-700 hover:text-zinc-900 bg-stone-100 hover:bg-stone-200 active:scale-95 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
             title="Add 30 seconds"
           >
             +30s
@@ -61,7 +61,7 @@ export default function RestTimerBar() {
           <button
             type="button"
             onClick={skip}
-            className="text-[11px] font-mono font-bold text-zinc-400 hover:text-white bg-zinc-800/40 hover:bg-zinc-800 active:scale-95 px-2.5 py-1 rounded-md transition-all"
+            className="text-[11px] font-mono font-bold text-zinc-500 hover:text-zinc-900 bg-stone-100 hover:bg-stone-200 active:scale-95 px-2.5 py-1 rounded-lg transition-all cursor-pointer"
           >
             Skip
           </button>

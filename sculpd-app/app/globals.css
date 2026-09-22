@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fafaf8;
+  --foreground: #18181b;
 }
 
 @theme inline {
@@ -12,14 +12,7 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-/* Ensure the parent windows stay completely frozen */
+/* Base viewport styling: lock outer window to prevent rubber-banding and elastic bounces */
 html, body {
   overflow: hidden;
   height: 100%;
@@ -27,14 +20,25 @@ html, body {
   margin: 0;
   padding: 0;
   position: fixed;
-  background-color: #000000;
+  background-color: #fafaf8;
+  color: #18181b;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* Force the inner view container to handle its own scrolling dynamically */
+/* Force the inner view container to handle its own smooth vertical scrolling */
 main {
   height: 100%;
   width: 100%;
-  overflow-y: scroll; /* Forces vertical touch interaction tracks */
-  -webkit-overflow-scrolling: touch; /* Leverages native iOS friction physics */
-  overscroll-behavior-y: contain; /* Blocks elastic page-pull refreshes */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* Utility to hide scrollbars while maintaining scroll functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

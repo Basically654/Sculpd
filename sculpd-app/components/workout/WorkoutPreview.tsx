@@ -28,7 +28,6 @@ export default function WorkoutPreview({ routineId, onStart }: WorkoutPreviewPro
       try {
         let loaded = await getRoutineWithExercises(routineId);
         if (!loaded) {
-          // Fallback if accessed via slug
           const routine = (await getRoutineBySlug(routineId)) || (await getRoutineById(routineId));
           if (routine) {
             loaded = await getRoutineWithExercises(routine.id);
@@ -61,9 +60,9 @@ export default function WorkoutPreview({ routineId, onStart }: WorkoutPreviewPro
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-4">
-        <div className="w-8 h-8 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin mb-4" />
-        <p className="text-xs font-mono uppercase tracking-widest text-zinc-500">
+      <div className="min-h-screen bg-[#fafaf8] text-zinc-900 flex flex-col items-center justify-center p-4">
+        <div className="w-8 h-8 rounded-full border-2 border-zinc-800 border-t-transparent animate-spin mb-4" />
+        <p className="text-xs font-mono uppercase tracking-widest text-stone-500">
           Loading Workout Preview...
         </p>
       </div>
@@ -72,11 +71,11 @@ export default function WorkoutPreview({ routineId, onStart }: WorkoutPreviewPro
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 text-center">
-        <p className="text-sm text-rose-400 font-mono mb-4">{error || "Workout not found."}</p>
+      <div className="min-h-screen bg-[#fafaf8] text-zinc-900 flex flex-col items-center justify-center p-6 text-center">
+        <p className="text-sm text-rose-600 font-medium mb-4">{error || "Workout not found."}</p>
         <Link
           href="/"
-          className="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-mono uppercase text-zinc-300 hover:text-white"
+          className="px-4 py-2 bg-white border border-stone-200 rounded-xl text-xs font-medium uppercase text-zinc-700 hover:text-zinc-900 shadow-xs"
         >
           ← Return to My Workouts
         </Link>
@@ -85,13 +84,13 @@ export default function WorkoutPreview({ routineId, onStart }: WorkoutPreviewPro
   }
 
   return (
-    <main className="min-h-screen bg-black text-white p-4 font-sans flex flex-col justify-between pb-8 max-w-md mx-auto w-full">
+    <main className="min-h-screen bg-[#fafaf8] text-zinc-900 p-4 font-sans flex flex-col justify-between pb-8 max-w-md mx-auto w-full">
       {/* Header & Back Navigation */}
       <div>
-        <div className="flex items-center justify-between py-2 mb-3">
+        <div className="flex items-center justify-between py-2 mb-4">
           <Link
             href="/"
-            className="text-xs font-mono uppercase text-zinc-500 hover:text-zinc-300 flex items-center gap-1 transition-colors"
+            className="text-xs font-medium uppercase tracking-wider text-stone-500 hover:text-zinc-900 flex items-center gap-1 transition-colors"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -108,22 +107,22 @@ export default function WorkoutPreview({ routineId, onStart }: WorkoutPreviewPro
 
           <Link
             href={`/workout/edit/${data.id}`}
-            className="text-xs font-mono uppercase text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-colors px-2.5 py-1 rounded bg-emerald-950/40 border border-emerald-800/40"
+            className="text-xs font-medium text-stone-600 hover:text-zinc-900 px-3 py-1 rounded-lg bg-white border border-stone-200 hover:border-stone-300 shadow-xs transition-colors"
           >
-            Edit
+            Edit Routine
           </Link>
         </div>
 
         {/* Workout Details */}
         <div className="mb-6">
-          <h1 className="text-2xl font-black uppercase tracking-tight text-white mb-1">
+          <h1 className="text-2xl font-black uppercase tracking-tight text-zinc-900 mb-1">
             {data.name}
           </h1>
           {data.description && (
-            <p className="text-xs text-zinc-400 leading-relaxed">{data.description}</p>
+            <p className="text-xs text-stone-600 leading-relaxed">{data.description}</p>
           )}
           <div className="mt-2 flex items-center gap-2">
-            <span className="text-[11px] font-mono text-zinc-500 uppercase">
+            <span className="text-[11px] font-mono text-stone-500">
               {data.exercises.length} {data.exercises.length === 1 ? "Exercise" : "Exercises"}
             </span>
           </div>
@@ -131,16 +130,16 @@ export default function WorkoutPreview({ routineId, onStart }: WorkoutPreviewPro
 
         {/* Exercise List Preview */}
         <div className="space-y-2.5">
-          <h2 className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400 mb-2">
+          <h2 className="text-[11px] font-mono font-bold uppercase tracking-wider text-stone-400 mb-2">
             Exercise List
           </h2>
 
           {data.exercises.length === 0 ? (
-            <div className="p-6 text-center border border-dashed border-zinc-800 rounded-xl">
-              <p className="text-xs text-zinc-500">No exercises added yet.</p>
+            <div className="p-8 text-center border border-dashed border-stone-300 rounded-2xl bg-white shadow-xs">
+              <p className="text-xs text-stone-500">No exercises added yet.</p>
               <Link
                 href={`/workout/edit/${data.id}`}
-                className="mt-2 inline-block text-xs font-mono uppercase text-emerald-400 hover:underline"
+                className="mt-2 inline-block text-xs font-bold uppercase text-zinc-900 hover:underline"
               >
                 + Add Exercises
               </Link>
@@ -149,35 +148,35 @@ export default function WorkoutPreview({ routineId, onStart }: WorkoutPreviewPro
             data.exercises.map((item, index) => (
               <div
                 key={item.id || index}
-                className="p-3.5 rounded-xl bg-zinc-950 border border-zinc-800/90 flex items-start justify-between"
+                className="p-3.5 rounded-xl bg-white border border-stone-200 shadow-xs flex items-start justify-between"
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono text-zinc-500 font-bold">
+                    <span className="text-xs font-mono text-stone-400 font-bold">
                       {index + 1}.
                     </span>
-                    <h3 className="text-sm font-bold text-zinc-200">
+                    <h3 className="text-sm font-bold text-zinc-900">
                       {item.exercise?.name || "Exercise"}
                     </h3>
                   </div>
 
-                  <div className="flex items-center gap-3 text-xs font-mono text-zinc-400 pl-4">
+                  <div className="flex items-center gap-3 text-xs font-mono text-stone-600 pl-4">
                     <span>
-                      {item.targetSets} × {item.targetReps}
+                      {item.targetSets} sets × {item.targetReps} reps
                     </span>
-                    <span className="text-zinc-600">•</span>
+                    <span className="text-stone-300">•</span>
                     <span>Rest: {item.restSeconds}s</span>
                   </div>
 
                   {item.notes && (
-                    <p className="text-[11px] text-zinc-500 italic pl-4 mt-0.5">
+                    <p className="text-[11px] text-stone-500 italic pl-4 mt-0.5">
                       {item.notes}
                     </p>
                   )}
                 </div>
 
                 {item.exercise?.category && (
-                  <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-zinc-900 text-zinc-500 border border-zinc-800">
+                  <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200">
                     {item.exercise.category}
                   </span>
                 )}
@@ -193,7 +192,7 @@ export default function WorkoutPreview({ routineId, onStart }: WorkoutPreviewPro
           type="button"
           onClick={onStart}
           disabled={data.exercises.length === 0}
-          className="w-full h-12 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:pointer-events-none text-black font-mono font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-lg shadow-emerald-950/40 cursor-pointer"
+          className="w-full h-14 rounded-2xl bg-zinc-900 hover:bg-zinc-800 disabled:opacity-50 disabled:pointer-events-none text-white font-bold text-sm uppercase tracking-wider flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-md shadow-zinc-900/10 cursor-pointer"
         >
           <span>START WORKOUT</span>
           <svg

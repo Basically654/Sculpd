@@ -8,13 +8,13 @@ import PinPadModal from "./PinPadModal";
 import AddProfileModal from "./AddProfileModal";
 
 const COLOR_MAP: Record<AvatarColor, { border: string; bg: string; text: string }> = {
-  emerald: { border: "border-emerald-500/60", bg: "bg-emerald-500/10", text: "text-emerald-400" },
-  amber: { border: "border-amber-500/60", bg: "bg-amber-500/10", text: "text-amber-400" },
-  violet: { border: "border-violet-500/60", bg: "bg-violet-500/10", text: "text-violet-400" },
-  cyan: { border: "border-cyan-500/60", bg: "bg-cyan-500/10", text: "text-cyan-400" },
-  rose: { border: "border-rose-500/60", bg: "bg-rose-500/10", text: "text-rose-400" },
-  blue: { border: "border-blue-500/60", bg: "bg-blue-500/10", text: "text-blue-400" },
-  fuchsia: { border: "border-fuchsia-500/60", bg: "bg-fuchsia-500/10", text: "text-fuchsia-400" },
+  emerald: { border: "border-emerald-200", bg: "bg-emerald-50", text: "text-emerald-800" },
+  amber: { border: "border-amber-200", bg: "bg-amber-50", text: "text-amber-800" },
+  violet: { border: "border-violet-200", bg: "bg-violet-50", text: "text-violet-800" },
+  cyan: { border: "border-cyan-200", bg: "bg-cyan-50", text: "text-cyan-800" },
+  rose: { border: "border-rose-200", bg: "bg-rose-50", text: "text-rose-800" },
+  blue: { border: "border-blue-200", bg: "bg-blue-50", text: "text-blue-800" },
+  fuchsia: { border: "border-fuchsia-200", bg: "bg-fuchsia-50", text: "text-fuchsia-800" },
 };
 
 export default function WhoIsTrainingView() {
@@ -44,16 +44,15 @@ export default function WhoIsTrainingView() {
     color: AvatarColor
   ) => {
     const newUser = await createProfile(name, pin, color);
-    // Automatically prompt PIN or log in
     setSelectedUser(newUser);
     setIsPinModalOpen(true);
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-4">
-        <div className="w-8 h-8 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin mb-4" />
-        <p className="text-xs font-mono uppercase tracking-widest text-zinc-500">
+      <div className="min-h-screen bg-[#fafaf8] text-zinc-900 flex flex-col items-center justify-center p-4">
+        <div className="w-8 h-8 rounded-full border-2 border-zinc-800 border-t-transparent animate-spin mb-4" />
+        <p className="text-xs font-mono uppercase tracking-widest text-stone-500">
           Loading Profiles...
         </p>
       </div>
@@ -61,31 +60,34 @@ export default function WhoIsTrainingView() {
   }
 
   return (
-    <main className="min-h-screen bg-black text-white p-6 font-sans flex flex-col justify-between max-w-md mx-auto w-full">
+    <main className="min-h-screen bg-[#fafaf8] text-zinc-900 p-6 font-sans flex flex-col justify-between max-w-md mx-auto w-full">
       {/* Brand Header */}
       <header className="pt-8 pb-4 text-center">
-        <h1 className="text-3xl font-black tracking-tighter text-zinc-100 uppercase">
+        <h1 className="text-3xl font-black tracking-tight text-zinc-900 uppercase">
           SCULP’D
         </h1>
-        <p className="text-xs font-semibold text-emerald-400 mt-1 uppercase tracking-widest">
+        <p className="text-xs font-semibold text-stone-500 mt-1 uppercase tracking-widest">
           Who’s training?
         </p>
       </header>
 
       {/* Profiles Grid / List */}
-      <div className="flex-1 flex flex-col justify-center space-y-3.5 my-auto w-full py-4">
+      <div className="flex-1 flex flex-col justify-center space-y-3 my-auto w-full py-4">
         {allProfiles.length === 0 ? (
-          <div className="text-center py-8 px-4 rounded-2xl bg-zinc-950 border border-zinc-900">
-            <p className="text-sm font-semibold text-zinc-300">
+          <div className="text-center py-10 px-6 rounded-2xl bg-white border border-stone-200 shadow-sm">
+            <div className="w-12 h-12 rounded-2xl bg-stone-100 border border-stone-200 flex items-center justify-center text-stone-500 text-lg mx-auto mb-3">
+              🏋️
+            </div>
+            <h2 className="text-base font-bold text-zinc-900">
               No profiles found
-            </p>
-            <p className="text-xs text-zinc-500 mt-1 mb-6">
-              Create your profile to start tracking workouts with private local storage.
+            </h2>
+            <p className="text-xs text-stone-500 mt-1 mb-6 leading-relaxed max-w-xs mx-auto">
+              Create your local profile to start tracking workouts with private device storage.
             </p>
             <button
               type="button"
               onClick={() => setIsAddModalOpen(true)}
-              className="py-3 px-6 rounded-xl bg-emerald-500 text-black font-black uppercase text-xs tracking-wider hover:bg-emerald-400 active:scale-95 transition-all shadow-lg shadow-emerald-500/20"
+              className="py-3 px-6 rounded-xl bg-zinc-900 text-white font-bold uppercase text-xs tracking-wider hover:bg-zinc-800 active:scale-95 transition-all shadow-sm cursor-pointer"
             >
               + Create First Profile
             </button>
@@ -99,30 +101,30 @@ export default function WhoIsTrainingView() {
                   key={user.id}
                   type="button"
                   onClick={() => handleProfileClick(user)}
-                  className={`w-full p-4 rounded-2xl bg-zinc-950 border ${theme.border} hover:bg-zinc-900/60 active:scale-[0.98] transition-all duration-200 flex items-center justify-between group text-left`}
+                  className="w-full p-4 rounded-xl bg-white border border-stone-200 hover:border-stone-300 hover:shadow-sm active:scale-[0.99] transition-all duration-150 flex items-center justify-between group text-left cursor-pointer"
                 >
                   <div className="flex items-center gap-3.5">
                     <div
-                      className={`w-12 h-12 rounded-full ${theme.bg} border-2 ${theme.border} ${theme.text} flex items-center justify-center font-black text-lg`}
+                      className={`w-11 h-11 rounded-full ${theme.bg} border ${theme.border} ${theme.text} flex items-center justify-center font-bold text-base shadow-xs`}
                     >
                       {user.displayName.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <h2 className="text-base font-black text-zinc-100 tracking-tight uppercase group-hover:text-white">
+                      <h2 className="text-base font-bold text-zinc-900 tracking-tight">
                         {user.displayName}
                       </h2>
-                      <span className="text-[10px] font-mono text-zinc-500 tracking-wide uppercase">
-                        Private Profile
+                      <span className="text-[11px] text-stone-500 tracking-wide">
+                        Tap to unlock
                       </span>
                     </div>
                   </div>
 
-                  <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 group-hover:text-zinc-300">
+                  <div className="w-8 h-8 rounded-lg bg-stone-50 border border-stone-200 flex items-center justify-center text-stone-400 group-hover:text-zinc-700 transition-colors">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
                       viewBox="0 0 24 24"
-                      strokeWidth={2.5}
+                      strokeWidth={2}
                       stroke="currentColor"
                       className="w-4 h-4"
                     >
@@ -141,7 +143,7 @@ export default function WhoIsTrainingView() {
             <button
               type="button"
               onClick={() => setIsAddModalOpen(true)}
-              className="w-full p-3.5 rounded-2xl bg-zinc-900/40 border border-dashed border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-wider mt-2"
+              className="w-full p-3.5 rounded-xl bg-white hover:bg-stone-50 border border-dashed border-stone-300 text-stone-600 hover:text-zinc-900 active:scale-[0.99] transition-all flex items-center justify-center gap-2 font-medium text-xs uppercase tracking-wider mt-2 cursor-pointer shadow-xs"
             >
               <span>+</span>
               <span>Add Profile</span>
@@ -152,8 +154,8 @@ export default function WhoIsTrainingView() {
 
       {/* Footer */}
       <footer className="text-center pt-4 pb-2">
-        <p className="text-[10px] font-mono tracking-widest text-zinc-600 uppercase">
-          Sculp’d 2.0 • Local-First PWA Core
+        <p className="text-[10px] font-mono tracking-widest text-stone-400 uppercase">
+          Sculp’d • Local-First Architecture
         </p>
       </footer>
 

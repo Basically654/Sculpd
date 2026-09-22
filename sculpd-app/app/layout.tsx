@@ -5,16 +5,16 @@ import { TimerProvider } from "@/components/timer/TimerContext";
 import RestTimerBar from "@/components/timer/RestTimerBar";
 import { UserProvider } from "@/components/auth/UserContext";
 
-// 1. Deny elastic responsive layouts (Kills iOS input auto-zoom anomalies)
+// 1. Mobile viewport settings optimized for gym-floor interaction
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#000000",
+  themeColor: "#fafaf8",
 };
 
-// 2. Enable standalone background execution (Hides Safari headers on save)
+// 2. Metadata configuration for PWA standalone usage
 export const metadata: Metadata = {
   title: "Sculp’d",
   description: "High-Efficiency Workout Tracker",
@@ -37,11 +37,11 @@ export const metadata: Metadata = {
     },
   ],
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
   ),
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "Sculp’d",
   },
   openGraph: {
@@ -62,9 +62,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className="h-full bg-black text-white antialiased overflow-hidden select-none touch-none"
+      className="h-full bg-[#fafaf8] text-zinc-900 antialiased overflow-hidden select-none"
     >
-      <body className="h-full w-full overflow-y-auto webkit-overflow-scrolling-touch">
+      <body className="h-full w-full overflow-y-auto bg-[#fafaf8] text-zinc-900">
         <UserProvider>
           <TimerProvider>
             {children}

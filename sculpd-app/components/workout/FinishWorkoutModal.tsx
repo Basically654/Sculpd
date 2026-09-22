@@ -39,10 +39,10 @@ export default function FinishWorkoutModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-sm rounded-2xl bg-zinc-950 border border-zinc-800 p-5 space-y-4 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="w-full max-w-sm rounded-2xl bg-white border border-stone-200 p-5 space-y-4 shadow-xl">
         <div className="text-center space-y-1">
-          <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 mx-auto flex items-center justify-center mb-2">
+          <div className="w-10 h-10 rounded-full bg-stone-100 border border-stone-200 text-zinc-900 mx-auto flex items-center justify-center mb-2">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -58,30 +58,30 @@ export default function FinishWorkoutModal({
               />
             </svg>
           </div>
-          <h2 className="text-lg font-black uppercase tracking-tight text-white">
+          <h2 className="text-lg font-bold uppercase tracking-tight text-zinc-900">
             Complete Workout
           </h2>
-          <p className="text-xs font-mono text-zinc-400">
+          <p className="text-xs font-mono text-zinc-500">
             {routine.name || routine.dayName}
             {(routine.description || routine.focusTarget) ? ` • ${routine.description || routine.focusTarget}` : ""}
           </p>
         </div>
 
         {/* Workout Stats Summary */}
-        <div className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-zinc-900/60 border border-zinc-800/80 font-mono text-center">
+        <div className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-stone-50 border border-stone-200 font-mono text-center">
           <div>
-            <span className="text-[10px] uppercase text-zinc-500 block">
+            <span className="text-[10px] uppercase text-zinc-400 block">
               Sets Logged
             </span>
-            <span className="text-lg font-black text-emerald-400">
+            <span className="text-lg font-bold text-zinc-900">
               {totalSets}
             </span>
           </div>
           <div>
-            <span className="text-[10px] uppercase text-zinc-500 block">
+            <span className="text-[10px] uppercase text-zinc-400 block">
               Exercises
             </span>
-            <span className="text-lg font-black text-zinc-200">
+            <span className="text-lg font-bold text-zinc-700">
               {uniqueExercises}
             </span>
           </div>
@@ -91,7 +91,7 @@ export default function FinishWorkoutModal({
         <div className="space-y-1">
           <label
             htmlFor="workout-notes"
-            className="text-[11px] font-mono uppercase text-zinc-400 font-semibold block"
+            className="text-[11px] font-mono uppercase text-zinc-500 font-semibold block"
           >
             Workout Notes (Optional)
           </label>
@@ -101,7 +101,7 @@ export default function FinishWorkoutModal({
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Energy levels, pump, equipment notes..."
             rows={2}
-            className="w-full bg-black border border-zinc-800 rounded-lg p-2.5 text-xs text-zinc-200 placeholder-zinc-600 font-mono focus:outline-none focus:border-emerald-500"
+            className="w-full bg-stone-50 border border-stone-200 rounded-lg p-2.5 text-xs text-zinc-900 placeholder-zinc-400 font-mono focus:bg-white focus:outline-none focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900"
           />
         </div>
 
@@ -111,7 +111,7 @@ export default function FinishWorkoutModal({
             type="button"
             disabled={isSubmitting}
             onClick={handleFinish}
-            className="w-full h-11 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-black uppercase tracking-wider text-xs flex items-center justify-center gap-2 active:scale-[0.98] shadow-lg shadow-emerald-950/50 disabled:opacity-50 transition-all cursor-pointer"
+            className="w-full h-11 rounded-xl bg-zinc-900 hover:bg-zinc-850 text-white font-mono font-bold uppercase tracking-wider text-xs flex items-center justify-center gap-2 active:scale-[0.98] shadow-sm disabled:opacity-50 transition-all cursor-pointer"
           >
             <span>{isSubmitting ? "Completing..." : "Complete Workout"}</span>
           </button>
@@ -120,7 +120,7 @@ export default function FinishWorkoutModal({
             type="button"
             disabled={isSubmitting}
             onClick={onCancel}
-            className="w-full h-10 rounded-xl bg-zinc-900 hover:bg-zinc-850 text-zinc-400 hover:text-zinc-200 font-mono text-xs uppercase tracking-wider active:scale-[0.98] transition-all"
+            className="w-full h-10 rounded-xl bg-stone-100 hover:bg-stone-200 text-zinc-600 hover:text-zinc-900 font-mono text-xs uppercase tracking-wider active:scale-[0.98] transition-all cursor-pointer"
           >
             Keep Training
           </button>
