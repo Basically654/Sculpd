@@ -319,7 +319,11 @@ export function useWorkoutSession({
       try {
         const nextSetNum = currentExerciseSets.length + 2;
         const configuredRest = (currentExercise as any).restSeconds || 90;
-        timer.start(configuredRest, currentExercise.name, nextSetNum);
+        const currentUrl =
+          typeof window !== "undefined"
+            ? window.location.pathname
+            : `/workout/${routineSlug}`;
+        timer.start(configuredRest, currentExercise.name, nextSetNum, currentUrl);
       } catch (timerErr) {
         console.warn("Could not start rest timer:", timerErr);
       }

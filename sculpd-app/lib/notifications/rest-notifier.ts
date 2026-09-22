@@ -46,35 +46,101 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
   }
 }
 
+export interface RestTimerPayload {
+  id: string;
+  restStartedAt: number;
+  restEndsAt: number;
+  totalDuration: number;
+  exerciseName?: string;
+  nextSetNumber?: number;
+  workoutUrl?: string;
+}
+
+export interface RestTimerState extends RestTimerPayload {
+  status: "running" | "completed" | "cancelled";
+  notificationSent?: boolean;
+}
+
+/**
+ * Pure calculation helpers for absolute-timestamp time keeping.
+ */
+export function calculateRemainingSeconds(
+  endsAtMs: number,
+  currentMs: number = Date.now()
+): number {
+  const diffMs = endsAtMs - currentMs;
+  return Math.max(0, Math.ceil(diffMs / 1000));
+}
+
+export function isRestExpired(
+  endsAtMs: number,
+  currentMs: number = Date.now()
+): boolean {
+  return currentMs >= endsAtMs;
+}
+
+export function buildNotificationContent(
+  exerciseName?: string,
+  nextSetNumber?: number
+): { title: string; body: string } {
+  const title = exerciseName
+    ? `Rest complete — ${exerciseName}`
+    : "Rest complete! ⏱️";
+
+  const body = nextSetNumber
+    ? `Ready for Set ${nextSetNumber}`
+    : "Your rest window is complete. Ready for next set.";
+
+  return { title, body };
+}
+
 /**
  * Schedules a background rest completion notification.
  * Dispatches to Service Worker so it fires even if the app tab is paused.
  */
 export async function scheduleRestNotification(
-  endTimeMs: number,
-  exerciseName?: string,
-  nextSetNumber?: number
+  payload: RestTimerPayload | number,
+  legacyExerciseName?: string,
+  legacyNextSetNumber?: number
 ): Promise<void> {
   if (typeof window === "undefined") return;
 
-  // Clear any existing fallback timeout
+  // Support both new object payload and legacy argument list
+  const fullPayload: RestTimerPayload =
+    typeof payload === "number"
+      ? {
+          id: `rest_${payload}`,
+          restStartedAt: Date.now(),
+          restEndsAt: payload,
+          totalDuration: Math.max(1, Math.round((payload - Date.now()) / 1000)),
+          exerciseName: legacyExerciseName,
+          nextSetNumber: legacyNextSetNumber,
+          workoutUrl: typeof window !== "undefined" ? window.location.pathname : "/",
+        }
+      : payload;
+
+  // Clear any existing foreground fallback timeout
   if (fallbackTimeoutId) {
     clearTimeout(fallbackTimeoutId as any);
     fallbackTimeoutId = null;
   }
 
-  const delayMs = Math.max(0, endTimeMs - Date.now());
+  const delayMs = Math.max(0, fullPayload.restEndsAt - Date.now());
 
-  // 1. Post to active Service Worker for background execution
+  // 1. Post to active Service Worker for background scheduling
   if ("serviceWorker" in navigator) {
     try {
       const reg = swRegistration || (await navigator.serviceWorker.ready);
       if (reg?.active) {
         reg.active.postMessage({
           type: "SCHEDULE_REST_TIMER",
-          endTime: endTimeMs,
-          exerciseName,
-          nextSetNumber,
+          id: fullPayload.id,
+          restStartedAt: fullPayload.restStartedAt,
+          restEndsAt: fullPayload.restEndsAt,
+          endTime: fullPayload.restEndsAt,
+          exerciseName: fullPayload.exerciseName,
+          nextSetNumber: fullPayload.nextSetNumber,
+          workoutUrl: fullPayload.workoutUrl,
         });
       }
     } catch (err) {
@@ -92,7 +158,7 @@ export async function scheduleRestNotification(
 /**
  * Cancels any scheduled rest notification.
  */
-export async function cancelRestNotification(): Promise<void> {
+export async function cancelRestNotification(timerId?: string): Promise<void> {
   if (typeof window === "undefined") return;
 
   if (fallbackTimeoutId) {
@@ -104,7 +170,10 @@ export async function cancelRestNotification(): Promise<void> {
     try {
       const reg = swRegistration || (await navigator.serviceWorker.ready);
       if (reg?.active) {
-        reg.active.postMessage({ type: "CANCEL_REST_TIMER" });
+        reg.active.postMessage({
+          type: "CANCEL_REST_TIMER",
+          id: timerId,
+        });
       }
     } catch {
       // ignore
