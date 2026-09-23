@@ -19,6 +19,9 @@ import {
 import {
   isBodyweightExercise,
   formatSetSummary,
+  getSetProgressLabel,
+  getSetProgressHeadline,
+  isTargetReached,
 } from "@/lib/load/load-utils";
 
 interface WorkoutScreenProps {
@@ -174,7 +177,15 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
       ? currentExerciseSets[currentExerciseSets.length - 1]
       : undefined;
 
-  const nextSetNumber = currentExerciseSets.length + 1;
+  const targetSetsCount =
+    typeof currentExercise.targetSets === "number" && currentExercise.targetSets > 0
+      ? currentExercise.targetSets
+      : null;
+
+  const currentSetNumber = currentExerciseSets.length + 1;
+  const isTargetMet = isTargetReached(currentExerciseSets.length, targetSetsCount);
+  const currentSetProgressText = getSetProgressLabel(currentSetNumber, targetSetsCount);
+  const currentSetHeadline = getSetProgressHeadline(currentSetNumber, targetSetsCount);
 
   // Handle Set Logging
   const handleLogSet = async (e?: React.FormEvent) => {
@@ -235,8 +246,8 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
         <DominantRestView
           exercise={currentExercise}
           lastLoggedSet={lastLoggedSet}
-          nextSetNumber={nextSetNumber}
-          totalSetsTarget={currentExercise.targetSets || 3}
+          nextSetNumber={currentSetNumber}
+          totalSetsTarget={targetSetsCount || 0}
           onSkipRest={timer.skip}
           onDeleteLastSet={deleteLastSet}
           onFinishWorkout={handleFinishWorkout}
@@ -280,7 +291,7 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
         </header>
 
         {/* Active Exercise Heading & Target */}
-        <section className="pt-6 pb-4 space-y-1">
+        <section className="pt-6 pb-3 space-y-1">
           <div className="flex items-center gap-2">
             <h1 className="text-3xl font-black uppercase tracking-tight text-zinc-900 leading-none">
               {currentExercise.name}
@@ -292,14 +303,14 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
             )}
           </div>
 
-          <div className="flex items-center gap-2 pt-1 flex-wrap">
-            <span className="text-xs font-mono text-stone-600">
-              Target: {currentExercise.targetSets} sets × {currentExercise.targetReps}
+          <div className="flex items-center gap-2 pt-1 flex-wrap font-mono text-xs">
+            <span className="font-semibold text-stone-700">
+              Target: {targetSetsCount ? `${targetSetsCount} × ${currentExercise.targetReps}` : `${currentExercise.targetReps} reps`}
             </span>
             {isBodyweight && (
               <>
                 <span className="text-stone-300">•</span>
-                <span className="text-xs font-mono text-stone-500">
+                <span className="text-stone-500">
                   Athlete BW:{" "}
                   {typeof activeUser?.bodyweight === "number"
                     ? `${activeUser.bodyweight} lbs`
@@ -310,7 +321,7 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
             {currentExercise.coachingCue && (
               <>
                 <span className="text-stone-300">•</span>
-                <span className="text-[11px] font-mono text-stone-500 line-clamp-1">
+                <span className="text-[11px] text-stone-500 line-clamp-1">
                   {currentExercise.coachingCue}
                 </span>
               </>
@@ -319,7 +330,7 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
         </section>
 
         {/* Previous Performance Telemetry */}
-        <section className="py-3 border-t border-stone-200/80 font-mono space-y-1.5">
+        <section className="py-2.5 border-t border-stone-200/80 font-mono space-y-1">
           <span className="text-[11px] uppercase tracking-widest text-stone-400 font-semibold block">
             Previous:
           </span>
@@ -343,40 +354,113 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
           )}
         </section>
 
-        {/* Today's Completed Sets */}
-        {currentExerciseSets.length > 0 && (
-          <section className="py-3 border-t border-stone-200/80 font-mono space-y-1.5">
-            <div className="flex items-center justify-between">
+        {/* Today's Completed Sets & Progression */}
+        <section className="py-3 border-t border-stone-200/80 font-mono space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
               <span className="text-[11px] uppercase tracking-widest text-stone-500 font-semibold block">
                 Today:
               </span>
+              <span className="text-xs font-bold text-zinc-900">
+                {currentSetProgressText}
+              </span>
+            </div>
+            {currentExerciseSets.length > 0 && (
               <button
                 type="button"
                 onClick={deleteLastSet}
                 className="text-xs text-stone-400 hover:text-rose-600 transition-colors cursor-pointer"
+                title="Undo last set"
               >
                 Undo
               </button>
-            </div>
+            )}
+          </div>
 
-            <div className="space-y-1 text-sm text-zinc-900 font-bold">
-              {currentExerciseSets.map((s, idx) => (
-                <div key={s.id || idx} className="flex items-center gap-2 tabular-nums">
+          <div className="space-y-1.5 text-sm font-mono">
+            {/* Completed Sets */}
+            {currentExerciseSets.map((s) => (
+              <div
+                key={s.id || s.setNumber}
+                className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-stone-100 border border-stone-200/80 tabular-nums text-zinc-900"
+              >
+                <div className="flex items-center gap-2.5">
                   <span className="text-emerald-700 font-bold">✓</span>
-                  <span>
+                  <span className="font-semibold text-xs text-stone-700">
+                    Set {s.setNumber}
+                  </span>
+                  <span className="text-stone-300">•</span>
+                  <span className="font-bold">
                     {formatSetSummary(s, isBodyweight)}
                   </span>
                 </div>
-              ))}
-            </div>
-          </section>
+              </div>
+            ))}
+
+            {/* Current Pending Set (within target) */}
+            {!isTargetMet && (
+              <div className="flex items-center gap-2.5 py-1.5 px-3 rounded-lg bg-white border border-dashed border-stone-300 tabular-nums text-stone-600">
+                <span className="text-stone-400 font-bold">○</span>
+                <span className="font-bold text-xs text-zinc-900">
+                  {currentSetProgressText}
+                </span>
+                <span className="text-[11px] text-stone-400 italic">
+                  (current)
+                </span>
+              </div>
+            )}
+
+            {/* Target Reached Status */}
+            {isTargetMet && (
+              <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-semibold">
+                <div className="flex items-center gap-2">
+                  <span className="text-emerald-600 text-sm font-bold">✓</span>
+                  <span>Target reached ({targetSetsCount} of {targetSetsCount} sets completed)</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Natural Transition when Target Reached */}
+        {isTargetMet && (
+          <div className="pt-2 pb-1">
+            {isLastExercise ? (
+              <button
+                type="button"
+                onClick={handleFinishWorkout}
+                className="w-full h-12 rounded-xl bg-zinc-900 hover:bg-zinc-800 active:scale-98 text-white font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+              >
+                <span>Finish Workout</span>
+                <span>✓</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={goToNextExercise}
+                className="w-full h-12 rounded-xl bg-zinc-900 hover:bg-zinc-800 active:scale-98 text-white font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+              >
+                <span>Next Exercise →</span>
+              </button>
+            )}
+          </div>
         )}
 
         {/* Rapid Set Logging Bar */}
-        <form onSubmit={handleLogSet} className="pt-4 space-y-2">
+        <form onSubmit={handleLogSet} className="pt-3 space-y-2">
           {validationError && (
             <p className="text-xs font-mono text-rose-600 font-medium">{validationError}</p>
           )}
+
+          {/* Form Context Header */}
+          <div className="flex items-center justify-between font-mono">
+            <span className="text-xs font-bold uppercase tracking-wider text-zinc-900">
+              {currentSetHeadline}
+            </span>
+            <span className="text-[11px] text-stone-500">
+              Log each set as you complete it.
+            </span>
+          </div>
 
           <div className="flex items-end gap-2.5">
             {/* Weight / Load Input */}
@@ -450,7 +534,8 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
           {exercises.map((ex, idx) => {
             const isActive = idx === currentExerciseIndex;
             const exSets = sessionSets?.filter((s) => s.exerciseId === ex.id) || [];
-            const isDone = exSets.length >= (ex.targetSets || 3);
+            const exTarget = typeof ex.targetSets === "number" && ex.targetSets > 0 ? ex.targetSets : null;
+            const isDone = exTarget ? exSets.length >= exTarget : exSets.length > 0;
 
             return (
               <button

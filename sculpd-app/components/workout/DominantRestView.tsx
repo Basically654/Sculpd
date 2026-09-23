@@ -51,7 +51,7 @@ export default function DominantRestView({
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-stone-300 font-mono text-xs font-medium">
             <span className="text-emerald-500">✓</span>
             <span>
-              {formatSetSummary(lastLoggedSet, isBW)}
+              Set {lastLoggedSet.setNumber}: {formatSetSummary(lastLoggedSet, isBW)}
             </span>
           </div>
         )}
@@ -78,7 +78,11 @@ export default function DominantRestView({
 
         {/* Next set indicator */}
         <div className="text-sm font-mono text-stone-300 pt-2 font-medium">
-          Next: Set {nextSetNumber} of {totalSetsTarget}
+          {totalSetsTarget > 0
+            ? nextSetNumber <= totalSetsTarget
+              ? `Next: Set ${nextSetNumber} of ${totalSetsTarget}`
+              : `Next: Set ${nextSetNumber} (Extra)`
+            : `Next: Set ${nextSetNumber}`}
         </div>
       </div>
 

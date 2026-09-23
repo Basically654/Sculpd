@@ -95,3 +95,51 @@ export function formatSetSummary(
   const loadStr = formatSetLoad(set, isBodyweight);
   return `${loadStr} × ${set.reps}`;
 }
+
+/**
+ * Generates clear, unambiguous set progress text for the user:
+ * - When target sets are defined and set <= target: "Set 1 of 3", "Set 2 of 3"
+ * - When target sets are exceeded (extra sets): "Set 4"
+ * - When no target is configured: "Set 1", "Set 2"
+ */
+export function getSetProgressLabel(
+  currentSetNumber: number,
+  targetSets?: number | null
+): string {
+  if (typeof targetSets === "number" && targetSets > 0) {
+    if (currentSetNumber <= targetSets) {
+      return `Set ${currentSetNumber} of ${targetSets}`;
+    }
+    return `Set ${currentSetNumber}`;
+  }
+  return `Set ${currentSetNumber}`;
+}
+
+/**
+ * Headline for the set logging form:
+ * - Within target: "Set 1 of 3"
+ * - Extra set beyond target: "Set 4 (Extra)"
+ * - No target: "Set 1"
+ */
+export function getSetProgressHeadline(
+  currentSetNumber: number,
+  targetSets?: number | null
+): string {
+  if (typeof targetSets === "number" && targetSets > 0) {
+    if (currentSetNumber <= targetSets) {
+      return `Set ${currentSetNumber} of ${targetSets}`;
+    }
+    return `Set ${currentSetNumber} (Extra)`;
+  }
+  return `Set ${currentSetNumber}`;
+}
+
+/**
+ * Checks whether the configured target set count has been reached.
+ */
+export function isTargetReached(
+  completedSetsCount: number,
+  targetSets?: number | null
+): boolean {
+  return typeof targetSets === "number" && targetSets > 0 && completedSetsCount >= targetSets;
+}
