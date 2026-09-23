@@ -260,23 +260,23 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
   }
 
   return (
-    <main className="min-h-screen bg-[#fafaf8] text-zinc-900 p-4 pb-12 max-w-md mx-auto w-full font-sans flex flex-col justify-between select-none">
+    <main className="min-h-screen bg-[#fafaf8] text-zinc-900 p-4 pb-8 max-w-md mx-auto w-full font-sans flex flex-col justify-between select-none">
       {/* Upper Context Header */}
       <div>
-        <header className="flex items-center justify-between pb-3.5 border-b border-stone-200/80 text-xs font-mono">
-          <div className="flex items-center gap-2">
+        <header className="flex items-center justify-between pb-3 border-b border-stone-200/80 text-xs font-mono">
+          <div className="flex items-center gap-2 min-w-0">
             <Link
               href="/"
-              className="text-stone-400 hover:text-zinc-900 transition-colors"
+              className="text-stone-400 hover:text-zinc-900 transition-colors p-1 -m-1"
               title="Return to dashboard"
             >
               ←
             </Link>
-            <span className="text-zinc-800 uppercase font-bold tracking-wider">
+            <span className="text-zinc-700 uppercase font-bold tracking-wider truncate max-w-[140px] sm:max-w-[200px]">
               {routine.name || routine.dayName}
             </span>
             <span className="text-stone-300">•</span>
-            <span className="text-stone-500">
+            <span className="text-stone-500 shrink-0">
               {currentExerciseIndex + 1} of {exercises.length}
             </span>
           </div>
@@ -284,34 +284,34 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
           <button
             type="button"
             onClick={handleFinishWorkout}
-            className="text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-900 hover:text-black bg-stone-100 hover:bg-stone-200 border border-stone-200 px-3 py-1.5 rounded-lg active:scale-95 transition-all cursor-pointer shadow-xs min-h-[36px] flex items-center justify-center"
+            className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-700 hover:text-black bg-stone-100 hover:bg-stone-200 border border-stone-200/80 px-2.5 py-1.5 rounded-lg active:scale-95 transition-all cursor-pointer shadow-xs min-h-[32px] shrink-0 flex items-center justify-center"
           >
             Finish Workout
           </button>
         </header>
 
         {/* Active Exercise Heading & Target */}
-        <section className="pt-6 pb-3 space-y-1">
-          <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-black uppercase tracking-tight text-zinc-900 leading-none">
+        <section className="pt-4 pb-2.5 space-y-1">
+          <div className="flex items-baseline gap-2">
+            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-zinc-950 leading-tight">
               {currentExercise.name}
             </h1>
             {isBodyweight && (
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-zinc-200 text-zinc-700">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-stone-200 text-stone-700 shrink-0 self-center">
                 BW
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-2 pt-1 flex-wrap font-mono text-xs">
-            <span className="font-semibold text-stone-700">
+          <div className="flex items-center gap-2 pt-0.5 flex-wrap font-mono text-xs">
+            <span className="font-bold text-zinc-800">
               Target: {targetSetsCount ? `${targetSetsCount} × ${currentExercise.targetReps}` : `${currentExercise.targetReps} reps`}
             </span>
             {isBodyweight && (
               <>
                 <span className="text-stone-300">•</span>
                 <span className="text-stone-500">
-                  Athlete BW:{" "}
+                  BW:{" "}
                   {typeof activeUser?.bodyweight === "number"
                     ? `${activeUser.bodyweight} lbs`
                     : "Not set"}
@@ -321,8 +321,8 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
             {currentExercise.coachingCue && (
               <>
                 <span className="text-stone-300">•</span>
-                <span className="text-[11px] text-stone-500 line-clamp-1">
-                  {currentExercise.coachingCue}
+                <span className="text-[11px] text-stone-500 line-clamp-1 italic">
+                  💡 {currentExercise.coachingCue}
                 </span>
               </>
             )}
@@ -330,22 +330,28 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
         </section>
 
         {/* Previous Performance Telemetry */}
-        <section className="py-2.5 border-t border-stone-200/80 font-mono space-y-1">
-          <span className="text-[11px] uppercase tracking-widest text-stone-400 font-semibold block">
+        <section className="py-2 border-t border-stone-200/80 font-mono space-y-1">
+          <span className="text-[10px] uppercase tracking-widest text-stone-400 font-semibold block">
             Previous:
           </span>
 
           {previousSessionSets.length > 0 ? (
-            <div className="space-y-1 text-sm text-stone-700 font-medium">
+            <div className="space-y-0.5 text-xs text-stone-600 font-medium">
               {previousSessionSets.map((s, idx) => (
-                <div key={s.id || idx} className="tabular-nums">
-                  {formatSetSummary(s, isBodyweight)}
+                <div key={s.id || idx} className="flex items-center gap-2 tabular-nums">
+                  <span className="text-stone-400 text-[11px]">Set {s.setNumber}:</span>
+                  <span className="font-semibold text-stone-700">
+                    {formatSetSummary(s, isBodyweight)}
+                  </span>
                 </div>
               ))}
             </div>
           ) : previousSet ? (
-            <div className="text-sm text-stone-700 font-medium tabular-nums">
-              {formatSetSummary(previousSet, isBodyweight)}
+            <div className="text-xs text-stone-700 font-medium tabular-nums flex items-center gap-2">
+              <span className="text-stone-400 text-[11px]">Last:</span>
+              <span className="font-semibold text-stone-700">
+                {formatSetSummary(previousSet, isBodyweight)}
+              </span>
             </div>
           ) : (
             <p className="text-xs text-stone-400 italic">
@@ -355,10 +361,10 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
         </section>
 
         {/* Today's Completed Sets & Progression */}
-        <section className="py-3 border-t border-stone-200/80 font-mono space-y-2">
+        <section className="py-2.5 border-t border-stone-200/80 font-mono space-y-1.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-[11px] uppercase tracking-widest text-stone-500 font-semibold block">
+              <span className="text-[10px] uppercase tracking-widest text-stone-400 font-semibold block">
                 Today:
               </span>
               <span className="text-xs font-bold text-zinc-900">
@@ -377,20 +383,20 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
             )}
           </div>
 
-          <div className="space-y-1.5 text-sm font-mono">
+          <div className="space-y-1 text-xs font-mono">
             {/* Completed Sets */}
             {currentExerciseSets.map((s) => (
               <div
                 key={s.id || s.setNumber}
-                className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-stone-100 border border-stone-200/80 tabular-nums text-zinc-900"
+                className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-stone-100/80 border border-stone-200/70 tabular-nums text-zinc-900"
               >
-                <div className="flex items-center gap-2.5">
-                  <span className="text-emerald-700 font-bold">✓</span>
-                  <span className="font-semibold text-xs text-stone-700">
+                <div className="flex items-center gap-2">
+                  <span className="text-emerald-700 font-bold text-xs">✓</span>
+                  <span className="font-medium text-stone-500 text-xs">
                     Set {s.setNumber}
                   </span>
                   <span className="text-stone-300">•</span>
-                  <span className="font-bold">
+                  <span className="font-bold text-zinc-900 text-xs">
                     {formatSetSummary(s, isBodyweight)}
                   </span>
                 </div>
@@ -399,12 +405,12 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
 
             {/* Current Pending Set (within target) */}
             {!isTargetMet && (
-              <div className="flex items-center gap-2.5 py-1.5 px-3 rounded-lg bg-white border border-dashed border-stone-300 tabular-nums text-stone-600">
-                <span className="text-stone-400 font-bold">○</span>
-                <span className="font-bold text-xs text-zinc-900">
+              <div className="flex items-center gap-2 py-1.5 px-3 rounded-lg bg-stone-50/70 border border-dashed border-stone-300 tabular-nums text-stone-600">
+                <span className="text-stone-400 text-xs">○</span>
+                <span className="font-bold text-xs text-zinc-800">
                   {currentSetProgressText}
                 </span>
-                <span className="text-[11px] text-stone-400 italic">
+                <span className="text-[10px] text-stone-400 uppercase tracking-wider font-semibold ml-1">
                   (current)
                 </span>
               </div>
@@ -412,10 +418,10 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
 
             {/* Target Reached Status */}
             {isTargetMet && (
-              <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-semibold">
-                <div className="flex items-center gap-2">
-                  <span className="text-emerald-600 text-sm font-bold">✓</span>
-                  <span>Target reached ({targetSetsCount} of {targetSetsCount} sets completed)</span>
+              <div className="flex items-center justify-between py-1.5 px-3 rounded-lg bg-emerald-50/80 border border-emerald-200 text-emerald-900 text-xs font-medium">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-emerald-700 font-bold text-xs">✓</span>
+                  <span className="font-semibold">Target reached ({targetSetsCount} of {targetSetsCount} sets completed)</span>
                 </div>
               </div>
             )}
@@ -424,12 +430,12 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
 
         {/* Natural Transition when Target Reached */}
         {isTargetMet && (
-          <div className="pt-2 pb-1">
+          <div className="pt-2">
             {isLastExercise ? (
               <button
                 type="button"
                 onClick={handleFinishWorkout}
-                className="w-full h-12 rounded-xl bg-zinc-900 hover:bg-zinc-800 active:scale-98 text-white font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                className="w-full h-12 rounded-xl bg-zinc-900 hover:bg-zinc-800 active:scale-98 text-white font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
               >
                 <span>Finish Workout</span>
                 <span>✓</span>
@@ -438,7 +444,7 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
               <button
                 type="button"
                 onClick={goToNextExercise}
-                className="w-full h-12 rounded-xl bg-zinc-900 hover:bg-zinc-800 active:scale-98 text-white font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                className="w-full h-12 rounded-xl bg-zinc-900 hover:bg-zinc-800 active:scale-98 text-white font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
               >
                 <span>Next Exercise →</span>
               </button>
@@ -447,29 +453,29 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
         )}
 
         {/* Rapid Set Logging Bar */}
-        <form onSubmit={handleLogSet} className="pt-3 space-y-2">
+        <form onSubmit={handleLogSet} className="pt-2.5 space-y-1.5">
           {validationError && (
             <p className="text-xs font-mono text-rose-600 font-medium">{validationError}</p>
           )}
 
           {/* Form Context Header */}
-          <div className="flex items-center justify-between font-mono">
-            <span className="text-xs font-bold uppercase tracking-wider text-zinc-900">
+          <div className="flex items-baseline justify-between gap-1 font-mono">
+            <span className="text-xs font-bold uppercase tracking-wider text-zinc-900 shrink-0">
               {currentSetHeadline}
             </span>
-            <span className="text-[11px] text-stone-500">
+            <span className="text-[10px] text-stone-400 tracking-tight text-right truncate">
               Log each set as you complete it.
             </span>
           </div>
 
-          <div className="flex items-end gap-2.5">
+          <div className="flex items-end gap-2">
             {/* Weight / Load Input */}
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <label
                 htmlFor="weight-input"
-                className="block text-[11px] font-mono uppercase tracking-wider text-stone-600 font-bold mb-1 pl-0.5"
+                className="block text-[10px] font-mono uppercase tracking-widest text-stone-500 font-semibold mb-1 pl-0.5"
               >
-                {isBodyweight ? "Added Weight (lbs)" : "Load (lbs)"}
+                {isBodyweight ? "Added Weight (lbs)" : "Weight"}
               </label>
               <div className="relative">
                 <input
@@ -478,22 +484,22 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
                   step="any"
                   min="0"
                   inputMode="decimal"
-                  placeholder={isBodyweight ? "0" : "Load (lbs)"}
+                  placeholder="0"
                   value={weight}
                   onChange={(e) => setWeight(e.target.value)}
-                  className="w-full h-14 bg-white border-2 border-stone-300 hover:border-stone-400 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 rounded-xl px-3 font-mono font-bold text-2xl text-center text-zinc-900 placeholder-stone-400 transition-colors shadow-sm cursor-text"
+                  className="w-full h-14 bg-white border-2 border-stone-300 hover:border-stone-400 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 rounded-xl pr-8 pl-3 font-mono font-bold text-2xl text-center text-zinc-950 placeholder:text-stone-300 placeholder:text-xl placeholder:font-normal transition-colors shadow-xs cursor-text"
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono uppercase text-stone-500 pointer-events-none font-bold">
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono text-stone-400 pointer-events-none font-medium select-none">
                   {isBodyweight ? "+lbs" : "lbs"}
                 </span>
               </div>
             </div>
 
             {/* Reps Input */}
-            <div className="w-28">
+            <div className="w-20 sm:w-24 shrink-0">
               <label
                 htmlFor="reps-input"
-                className="block text-[11px] font-mono uppercase tracking-wider text-stone-600 font-bold mb-1 pl-0.5"
+                className="block text-[10px] font-mono uppercase tracking-widest text-stone-500 font-semibold mb-1 pl-0.5"
               >
                 Reps
               </label>
@@ -504,12 +510,12 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
                   min="1"
                   step="1"
                   inputMode="numeric"
-                  placeholder="Reps"
+                  placeholder="0"
                   value={reps}
                   onChange={(e) => setReps(e.target.value)}
-                  className="w-full h-14 bg-white border-2 border-stone-300 hover:border-stone-400 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 rounded-xl px-3 font-mono font-bold text-2xl text-center text-zinc-900 placeholder-stone-400 transition-colors shadow-sm cursor-text"
+                  className="w-full h-14 bg-white border-2 border-stone-300 hover:border-stone-400 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 rounded-xl pr-9 pl-2 font-mono font-bold text-2xl text-center text-zinc-950 placeholder:text-stone-300 placeholder:text-xl placeholder:font-normal transition-colors shadow-xs cursor-text"
                 />
-                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono uppercase text-stone-500 pointer-events-none font-bold">
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-stone-400 pointer-events-none font-medium select-none">
                   reps
                 </span>
               </div>
@@ -519,7 +525,7 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="h-14 px-5 rounded-xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 text-white font-mono font-bold text-xs uppercase tracking-wider shadow-sm transition-all cursor-pointer disabled:opacity-50 min-w-[96px] flex items-center justify-center"
+              className="h-14 px-3.5 sm:px-5 rounded-xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 text-white font-mono font-bold text-xs uppercase tracking-wider shadow-xs transition-all cursor-pointer disabled:opacity-50 min-w-[84px] sm:min-w-[96px] shrink-0 flex items-center justify-center"
             >
               LOG SET
             </button>
@@ -528,9 +534,9 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
       </div>
 
       {/* Navigation Footer */}
-      <footer className="pt-8 space-y-3">
+      <footer className="pt-5 space-y-2.5">
         {/* Compact Exercise Dots / Selector */}
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex items-center justify-center gap-1.5">
           {exercises.map((ex, idx) => {
             const isActive = idx === currentExerciseIndex;
             const exSets = sessionSets?.filter((s) => s.exerciseId === ex.id) || [];
@@ -542,12 +548,12 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
                 key={ex.id}
                 type="button"
                 onClick={() => goToExercise(idx)}
-                className={`h-2 rounded-full transition-all cursor-pointer ${
+                className={`h-1.5 rounded-full transition-all cursor-pointer ${
                   isActive
-                    ? "w-8 bg-zinc-900"
+                    ? "w-7 bg-zinc-900"
                     : isDone
-                    ? "w-2 bg-emerald-700"
-                    : "w-2 bg-stone-300 hover:bg-stone-400"
+                    ? "w-1.5 bg-emerald-600"
+                    : "w-1.5 bg-stone-300 hover:bg-stone-400"
                 }`}
                 title={ex.name}
               />
@@ -561,16 +567,16 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
             type="button"
             onClick={goToPreviousExercise}
             disabled={isFirstExercise}
-            className="h-11 px-3 rounded-xl text-stone-400 hover:text-zinc-900 disabled:opacity-20 uppercase font-medium transition-colors cursor-pointer flex items-center justify-center min-h-[44px]"
+            className="h-10 px-3 rounded-lg text-stone-400 hover:text-zinc-900 disabled:opacity-20 uppercase font-semibold text-xs tracking-wider transition-colors cursor-pointer flex items-center justify-center min-h-[40px]"
           >
-            ← Previous
+            ← Prev
           </button>
 
           {isLastExercise ? (
             <button
               type="button"
               onClick={handleFinishWorkout}
-              className="h-11 px-5 rounded-xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 text-white font-mono font-bold uppercase tracking-wider text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer min-h-[44px]"
+              className="h-10 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 text-white font-mono font-bold uppercase tracking-wider text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer min-h-[40px]"
             >
               <span>Finish Workout</span>
               <span>✓</span>
@@ -579,7 +585,7 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
             <button
               type="button"
               onClick={goToNextExercise}
-              className="h-11 px-3 rounded-xl text-zinc-800 hover:text-black font-bold uppercase transition-colors cursor-pointer flex items-center justify-center min-h-[44px]"
+              className="h-10 px-3 rounded-lg text-zinc-800 hover:text-black font-bold uppercase tracking-wider text-xs transition-colors cursor-pointer flex items-center justify-center min-h-[40px]"
             >
               Next Exercise →
             </button>
