@@ -2,7 +2,10 @@
 import { NextResponse } from "next/server";
 import { extractVerifiedUserId } from "@/lib/auth/session-token";
 import { getRestNotificationsCollection } from "@/lib/mongodb";
-import { cancelDelayedPushWebhook } from "@/lib/notifications/scheduler";
+import {
+  cancelDelayedPushWebhook,
+  cancelServerTimer,
+} from "@/lib/notifications/scheduler";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +26,10 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const { timerId } = body;
 
+    if (timerId) {
+      cancelServerTimer(timerId);
+    }
+
     const col = await getRestNotificationsCollection();
     const now = new Date().toISOString();
 
@@ -34,6 +41,7 @@ export async function POST(request: Request) {
     const activeDocs = await col.find(query).toArray();
 
     for (const doc of activeDocs) {
+      cancelServerTimer(doc.id);
       if (doc.qstashMessageId) {
         await cancelDelayedPushWebhook(doc.qstashMessageId);
       }
@@ -45,6 +53,20 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, cancelledCount: activeDocs.length });
   } catch (error: any) {
+    const isMongoOffline =
+      error?.name?.includes("Mongo") ||
+      error?.message?.includes("MONGODB_URI") ||
+      error?.message?.includes("getaddrinfo") ||
+      error?.message?.includes("timed out") ||
+      error?.message?.includes("ECONNREFUSED");
+
+    if (isMongoOffline) {
+      console.warn("Cancel notification offline notice:", error?.message || error);
+      return NextResponse.json(
+        { success: true, offline: true, note: "Server timer cleared locally" }
+      );
+    }
+
     console.error("Cancel notification error:", error);
     return NextResponse.json(
       { success: false, error: error?.message || "Internal server error." },

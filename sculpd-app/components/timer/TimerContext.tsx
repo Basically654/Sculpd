@@ -12,6 +12,7 @@ import React, {
 import {
   initServiceWorker,
   requestNotificationPermission,
+  ensurePushSubscription,
   scheduleRestNotification,
   cancelRestNotification,
   playRestCompleteChime,
@@ -40,7 +41,8 @@ export type TimerContextValue = {
     seconds?: number,
     exerciseName?: string,
     nextSetNumber?: number,
-    workoutUrl?: string
+    workoutUrl?: string,
+    stableTimerId?: string
   ) => void;
   stop: () => void;
   skip: () => void;
@@ -80,9 +82,16 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
     sessionTokenRef.current = sessionToken;
   }, [sessionToken]);
 
-  // Initialize service worker on client startup
+  // Initialize service worker on client startup & ensure push subscription if permission granted
   useEffect(() => {
     initServiceWorker().catch(() => {});
+    if (
+      sessionTokenRef.current &&
+      typeof Notification !== "undefined" &&
+      Notification.permission === "granted"
+    ) {
+      ensurePushSubscription(sessionTokenRef.current).catch(() => {});
+    }
   }, []);
 
   const stop = useCallback(() => {
@@ -138,7 +147,8 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
       seconds = 90,
       exName?: string,
       nextSet?: number,
-      targetWorkoutUrl?: string
+      targetWorkoutUrl?: string,
+      stableTimerId?: string
     ) => {
       if (intervalRef.current) {
         window.clearInterval(intervalRef.current);
@@ -146,7 +156,7 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
 
       const now = Date.now();
       const targetMs = now + seconds * 1000;
-      const id = `rest_${now}_${Math.random().toString(36).substring(2, 7)}`;
+      const id = stableTimerId || `rest_${now}_${Math.random().toString(36).substring(2, 7)}`;
 
       endTimeRef.current = targetMs;
       startedTimeRef.current = now;
@@ -180,8 +190,16 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
         localStorage.setItem(STORAGE_TOTAL_KEY, String(seconds));
       }
 
-      // Request notification permission non-intrusively
-      requestNotificationPermission().catch(() => {});
+      // Ensure push subscription if permission already granted
+      if (
+        sessionTokenRef.current &&
+        typeof Notification !== "undefined" &&
+        Notification.permission === "granted"
+      ) {
+        ensurePushSubscription(sessionTokenRef.current).catch(() => {});
+      } else {
+        requestNotificationPermission().catch(() => {});
+      }
 
       // Dispatch background notification to Service Worker and server scheduler
       scheduleRestNotification(

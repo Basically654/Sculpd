@@ -12,6 +12,10 @@ import DominantRestView from "./DominantRestView";
 import PROverlay from "./PROverlay";
 import PostWorkoutView from "./PostWorkoutView";
 import WorkoutPreview from "./WorkoutPreview";
+import {
+  requestNotificationPermission,
+  ensurePushSubscription,
+} from "@/lib/notifications/rest-notifier";
 
 interface WorkoutScreenProps {
   routineSlug: string;
@@ -170,6 +174,17 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
     if (isNaN(parsedReps) || parsedReps <= 0) {
       setValidationError("Enter reps ≥ 1");
       return;
+    }
+
+    // Direct user gesture: Request notification permission on first log set if default
+    if (typeof Notification !== "undefined" && Notification.permission === "default") {
+      requestNotificationPermission()
+        .then((perm) => {
+          if (perm === "granted" && sessionToken) {
+            ensurePushSubscription(sessionToken).catch(() => {});
+          }
+        })
+        .catch(() => {});
     }
 
     try {

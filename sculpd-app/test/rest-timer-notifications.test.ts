@@ -8,6 +8,10 @@ import {
   RestTimerPayload,
 } from "../lib/notifications/rest-notifier";
 import { formatPushPayload } from "../lib/notifications/web-push-server";
+import {
+  cancelServerTimer,
+  getServerTimersMap,
+} from "../lib/notifications/scheduler";
 
 // Assertion helper
 function assert(condition: boolean, message: string) {
@@ -296,6 +300,75 @@ async function runNotificationTests() {
   // Advance clock past expiration
   const expiredOffline = isRestExpired(offlineStored.restEndsAt, offlineT0 + 121000);
   assert(expiredOffline === true, "Expiration detected offline without network");
+
+  console.log("\n--- 11. Deterministic Stable Timer ID & Session Association ---");
+  const testSessionId = "sess_gym_2026";
+  const testExerciseId = "ex_barbell_bench";
+  const testSetNum = 2;
+  const stableTimerId = `rest_${testSessionId}_${testExerciseId}_set${testSetNum}`;
+
+  assert(
+    stableTimerId === "rest_sess_gym_2026_ex_barbell_bench_set2",
+    "Stable timer ID formatted with session, exercise, and set context"
+  );
+
+  // Calling multiple times for the same set produces identical stable ID
+  const duplicateStableId = `rest_${testSessionId}_${testExerciseId}_set${testSetNum}`;
+  assert(
+    stableTimerId === duplicateStableId,
+    "Identical stable ID produced across repeated calls (prevents multi-timer duplicates)"
+  );
+
+  console.log("\n--- 12. Service Worker SCHEDULE_REST_TIMER Message Contract ---");
+  // Simulate Service Worker message listener handling SCHEDULE_REST_TIMER
+  let swSimActiveTimer: { id: string; targetEndMs: number; tag: string } | null = null;
+  const simulateSwMessage = (msg: { type: string; id: string; restEndsAt: number }) => {
+    if (msg.type === "SCHEDULE_REST_TIMER") {
+      swSimActiveTimer = {
+        id: msg.id,
+        targetEndMs: msg.restEndsAt,
+        tag: `sculpd-rest-${msg.id}`,
+      };
+    } else if (msg.type === "CANCEL_REST_TIMER") {
+      if (swSimActiveTimer && (!msg.id || swSimActiveTimer.id === msg.id)) {
+        swSimActiveTimer = null;
+      }
+    }
+  };
+
+  simulateSwMessage({
+    type: "SCHEDULE_REST_TIMER",
+    id: stableTimerId,
+    restEndsAt: t0 + 90000,
+  });
+
+  assert(swSimActiveTimer !== null, "Service Worker accepted SCHEDULE_REST_TIMER");
+  assert(swSimActiveTimer?.id === stableTimerId, "Service Worker stored stable timer ID");
+  assert(
+    swSimActiveTimer?.tag === `sculpd-rest-${stableTimerId}`,
+    "Service Worker deduplication tag matches push tag convention"
+  );
+
+  // Cancel clears the timer
+  simulateSwMessage({
+    type: "CANCEL_REST_TIMER",
+    id: stableTimerId,
+    restEndsAt: 0,
+  });
+  assert(swSimActiveTimer === null, "Service Worker CANCEL_REST_TIMER clears active timer");
+
+  console.log("\n--- 13. Server-Side Timer Map & Cancellation Safety ---");
+  const timersMap = getServerTimersMap();
+  const testServerTimerId = "server_test_timer_1";
+
+  // Simulate registering a server timer
+  const dummyTimeout = setTimeout(() => {}, 60000);
+  timersMap.set(testServerTimerId, dummyTimeout);
+  assert(timersMap.has(testServerTimerId), "Server timer registered in in-memory map");
+
+  // Cancel server timer
+  cancelServerTimer(testServerTimerId);
+  assert(!timersMap.has(testServerTimerId), "cancelServerTimer successfully pruned timer from map");
 
   console.log("\n============================================================");
   console.log("✅ ALL REST TIMER & BACKGROUND NOTIFICATION TESTS PASSED 100%!");

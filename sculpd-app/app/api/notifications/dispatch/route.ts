@@ -1,11 +1,6 @@
-// app/api/notifications/dispatch/route.ts
 import { NextResponse } from "next/server";
 import { Receiver } from "@upstash/qstash";
-import {
-  getRestNotificationsCollection,
-  getPushSubscriptionsCollection,
-} from "@/lib/mongodb";
-import { sendPushToSubscription } from "@/lib/notifications/web-push-server";
+import { executeRestNotificationDispatch } from "@/lib/notifications/scheduler";
 
 export const dynamic = "force-dynamic";
 
@@ -65,89 +60,30 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Database Guard: Verify timer is still scheduled and not cancelled or extended
-    const restCol = await getRestNotificationsCollection();
-    const notif = await restCol.findOne({ id: timerId });
-
-    if (!notif) {
-      return NextResponse.json({
-        success: true,
-        skipped: true,
-        reason: "Timer record not found",
-      });
-    }
-
-    if (notif.status !== "scheduled") {
-      return NextResponse.json({
-        success: true,
-        skipped: true,
-        reason: `Timer status is ${notif.status}`,
-      });
-    }
-
-    // 4. Retrieve active push subscriptions for the user
-    const subsCol = await getPushSubscriptionsCollection();
-    const subscriptions = await subsCol.find({ userId }).toArray();
-
-    if (subscriptions.length === 0) {
-      await restCol.updateOne(
-        { id: timerId },
-        {
-          $set: {
-            status: "dispatched",
-            updatedAt: new Date().toISOString(),
-          },
-        }
-      );
-      return NextResponse.json({
-        success: true,
-        deliveredCount: 0,
-        note: "No push subscriptions registered for user",
-      });
-    }
-
-    // 5. Construct notification content
-    const title = notif.exerciseName
-      ? `Rest complete — ${notif.exerciseName}`
-      : "Rest complete! ⏱️";
-
-    const body = notif.nextSetNumber
-      ? `Ready for Set ${notif.nextSetNumber}`
-      : "Your rest window is complete. Ready for next set.";
-
-    const pushPayload = {
-      timerId,
-      title,
-      body,
-      url: notif.workoutUrl || "/",
-    };
-
-    // 6. Send Web Push to all user devices
-    let deliveredCount = 0;
-    for (const sub of subscriptions) {
-      const res = await sendPushToSubscription(sub, pushPayload);
-      if (res.success) {
-        deliveredCount++;
-      }
-    }
-
-    // 7. Mark status as dispatched in MongoDB
-    await restCol.updateOne(
-      { id: timerId },
-      {
-        $set: {
-          status: "dispatched",
-          updatedAt: new Date().toISOString(),
-        },
-      }
-    );
+    // 3. Execute verified dispatch
+    const dispatchResult = await executeRestNotificationDispatch(timerId, userId);
 
     return NextResponse.json({
-      success: true,
-      deliveredCount,
-      totalSubscriptions: subscriptions.length,
+      success: dispatchResult.success,
+      deliveredCount: dispatchResult.deliveredCount,
+      reason: dispatchResult.reason,
     });
   } catch (error: any) {
+    const isMongoOffline =
+      error?.name?.includes("Mongo") ||
+      error?.message?.includes("MONGODB_URI") ||
+      error?.message?.includes("getaddrinfo") ||
+      error?.message?.includes("timed out") ||
+      error?.message?.includes("ECONNREFUSED");
+
+    if (isMongoOffline) {
+      console.warn("Notification dispatch offline notice:", error?.message || error);
+      return NextResponse.json(
+        { success: false, error: "Cloud database offline or unreachable." },
+        { status: 503 }
+      );
+    }
+
     console.error("Notification dispatch error:", error);
     return NextResponse.json(
       { success: false, error: error?.message || "Internal server error." },

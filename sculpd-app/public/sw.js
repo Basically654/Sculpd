@@ -101,18 +101,82 @@ self.addEventListener("notificationclick", (event) => {
   );
 });
 
+let activeLocalTimer = null;
+
+function buildNotificationText(exerciseName, nextSetNumber) {
+  const title = exerciseName
+    ? `Rest complete — ${exerciseName}`
+    : "Rest complete! ⏱️";
+  const body = nextSetNumber
+    ? `Ready for Set ${nextSetNumber}`
+    : "Your rest window is complete. Ready for next set.";
+  return { title, body };
+}
+
 /**
  * 3. Client Message Handler
  *
- * Allows foreground application to dismiss active notifications when the user
- * taps 'Ready Now' or skips the rest period in the app UI.
+ * Receives timer events from the client page:
+ * - SCHEDULE_REST_TIMER: Sets local SW timer for background notification if SW stays active
+ * - CANCEL_REST_TIMER: Clears timer and dismisses active rest notifications
  */
 self.addEventListener("message", (event) => {
   if (!event.data || typeof event.data !== "object") return;
 
-  const { type, id } = event.data;
+  const { type, id, restEndsAt, exerciseName, nextSetNumber, workoutUrl } = event.data;
 
-  if (type === "CANCEL_REST_TIMER") {
+  if (type === "SCHEDULE_REST_TIMER") {
+    // Clear any previous active local timer
+    if (activeLocalTimer) {
+      clearTimeout(activeLocalTimer.timeoutId);
+      activeLocalTimer = null;
+    }
+
+    const targetEndMs = restEndsAt || event.data.endTime || Date.now();
+    const delay = Math.max(0, targetEndMs - Date.now());
+    const timerTag = id ? `sculpd-rest-${id}` : "sculpd-rest-timer";
+
+    const timeoutId = setTimeout(async () => {
+      activeLocalTimer = null;
+      try {
+        // Check if app window is actively focused and visible
+        const clientList = await self.clients.matchAll({
+          type: "window",
+          includeUncontrolled: true,
+        });
+        const hasVisibleFocusedClient = clientList.some(
+          (c) => c.focused && c.visibilityState === "visible"
+        );
+
+        // If app is suspended, tab hidden, or phone locked: display notification
+        if (!hasVisibleFocusedClient) {
+          const { title, body } = buildNotificationText(exerciseName, nextSetNumber);
+          await self.registration.showNotification(title, {
+            body,
+            icon: "/icon-192.png",
+            badge: "/icon-192.png",
+            tag: timerTag,
+            renotify: true,
+            requireInteraction: true,
+            vibrate: [300, 100, 300, 100, 300],
+            data: {
+              url: workoutUrl || "/",
+              timestamp: Date.now(),
+            },
+          });
+        }
+      } catch (err) {
+        console.warn("SW local rest notification error:", err);
+      }
+    }, delay);
+
+    activeLocalTimer = { id, timeoutId, targetEndMs };
+  } else if (type === "CANCEL_REST_TIMER") {
+    if (activeLocalTimer && (!id || activeLocalTimer.id === id)) {
+      clearTimeout(activeLocalTimer.timeoutId);
+      activeLocalTimer = null;
+    }
+
     const timerTag = id ? `sculpd-rest-${id}` : null;
 
     const dismissPromise = self.registration

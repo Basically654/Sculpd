@@ -191,6 +191,34 @@ export async function unsubscribeUserFromPush(
   }
 }
 
+let pushSubscriptionEnsured = false;
+
+/**
+ * Ensures the current browser is registered with Web Push if permission has already
+ * been granted. Safe to call idempotently on app launch or workout start.
+ */
+export async function ensurePushSubscription(
+  sessionToken: string
+): Promise<{ success: boolean; subscription?: PushSubscription; error?: string }> {
+  if (!isPushSupported()) {
+    return { success: false, error: "Web Push not supported on this device/browser." };
+  }
+
+  if (typeof Notification === "undefined" || Notification.permission !== "granted") {
+    return { success: false, error: "Notification permission not granted." };
+  }
+
+  if (pushSubscriptionEnsured) {
+    return { success: true };
+  }
+
+  const res = await subscribeUserToPush(sessionToken);
+  if (res.success) {
+    pushSubscriptionEnsured = true;
+  }
+  return res;
+}
+
 export interface RestTimerPayload {
   id: string;
   restStartedAt: number;
@@ -305,6 +333,10 @@ export async function scheduleRestNotification(
   // 4. Asynchronously schedule Web Push via server scheduler
   // Completely safe: if offline, sessionToken is missing, or network fails, workout is unaffected
   if (sessionToken && navigator.onLine) {
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      ensurePushSubscription(sessionToken).catch(() => {});
+    }
+
     fetch("/api/notifications/schedule", {
       method: "POST",
       headers: {

@@ -6,7 +6,8 @@ import {
   getRestNotificationsCollection,
 } from "@/lib/mongodb";
 import {
-  scheduleDelayedPushWebhook,
+  scheduleServerRestTimer,
+  cancelServerTimer,
   cancelDelayedPushWebhook,
 } from "@/lib/notifications/scheduler";
 
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
       .toArray();
 
     for (const activeDoc of existingActive) {
+      cancelServerTimer(activeDoc.id);
       if (activeDoc.qstashMessageId) {
         await cancelDelayedPushWebhook(activeDoc.qstashMessageId);
       }
@@ -62,7 +64,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Determine absolute callback URL for QStash webhook
+    // 2. Determine absolute callback URL for QStash webhook fallback
     const appUrl =
       process.env.NEXT_PUBLIC_APP_URL ||
       request.headers.get("origin") ||
@@ -70,8 +72,8 @@ export async function POST(request: Request) {
 
     const callbackUrl = `${appUrl.replace(/\/$/, "")}/api/notifications/dispatch`;
 
-    // 3. Schedule delayed delivery in QStash
-    const scheduleResult = await scheduleDelayedPushWebhook({
+    // 3. Schedule delivery with Server-side timer & optional QStash fallback
+    const scheduleResult = await scheduleServerRestTimer({
       timerId,
       userId: verifiedUserId,
       targetEpochMs: scheduledFor,
@@ -108,6 +110,21 @@ export async function POST(request: Request) {
       messageId: scheduleResult.messageId,
     });
   } catch (error: any) {
+    const isMongoOffline =
+      error?.name?.includes("Mongo") ||
+      error?.message?.includes("MONGODB_URI") ||
+      error?.message?.includes("getaddrinfo") ||
+      error?.message?.includes("timed out") ||
+      error?.message?.includes("ECONNREFUSED");
+
+    if (isMongoOffline) {
+      console.warn("Schedule notification offline notice:", error?.message || error);
+      return NextResponse.json(
+        { success: false, error: "Cloud database offline or unreachable." },
+        { status: 503 }
+      );
+    }
+
     console.error("Schedule notification error:", error);
     return NextResponse.json(
       { success: false, error: error?.message || "Internal server error." },

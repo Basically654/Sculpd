@@ -323,7 +323,11 @@ export function useWorkoutSession({
           typeof window !== "undefined"
             ? window.location.pathname
             : `/workout/${routineSlug}`;
-        timer.start(configuredRest, currentExercise.name, nextSetNum, currentUrl);
+        const stableTimerId =
+          session?.id && currentExercise?.id
+            ? `rest_${session.id}_${currentExercise.id}_set${nextSetNum}`
+            : undefined;
+        timer.start(configuredRest, currentExercise.name, nextSetNum, currentUrl, stableTimerId);
       } catch (timerErr) {
         console.warn("Could not start rest timer:", timerErr);
       }

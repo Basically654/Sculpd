@@ -1,5 +1,163 @@
 // lib/notifications/scheduler.ts
 import { Client } from "@upstash/qstash";
+import {
+  getRestNotificationsCollection,
+  getPushSubscriptionsCollection,
+} from "@/lib/mongodb";
+import { sendPushToSubscription } from "@/lib/notifications/web-push-server";
+
+declare global {
+  // eslint-disable-next-line no-var
+  var _serverRestTimers: Map<string, NodeJS.Timeout> | undefined;
+}
+
+export function getServerTimersMap(): Map<string, NodeJS.Timeout> {
+  if (!global._serverRestTimers) {
+    global._serverRestTimers = new Map();
+  }
+  return global._serverRestTimers;
+}
+
+export function cancelServerTimer(timerId: string): void {
+  const timers = getServerTimersMap();
+  const existing = timers.get(timerId);
+  if (existing) {
+    clearTimeout(existing);
+    timers.delete(timerId);
+  }
+}
+
+/**
+ * Dispatches the Web Push notification directly to the user's devices.
+ * Verified with MongoDB state to prevent duplicate or cancelled triggers.
+ */
+export async function executeRestNotificationDispatch(
+  timerId: string,
+  userId: string
+): Promise<{ success: boolean; deliveredCount: number; reason?: string }> {
+  try {
+    const col = await getRestNotificationsCollection();
+    const notif = await col.findOne({ id: timerId });
+
+    if (!notif) {
+      return { success: true, deliveredCount: 0, reason: "Timer record not found" };
+    }
+
+    if (notif.status !== "scheduled") {
+      return { success: true, deliveredCount: 0, reason: `Timer status is ${notif.status}` };
+    }
+
+    // Two-layer race condition guard: If timer was extended into the future by >3 seconds, do not fire yet
+    if (notif.scheduledFor > Date.now() + 3000) {
+      return { success: true, deliveredCount: 0, reason: "Timer was extended" };
+    }
+
+    const subsCol = await getPushSubscriptionsCollection();
+    const subscriptions = await subsCol.find({ userId }).toArray();
+
+    if (subscriptions.length === 0) {
+      await col.updateOne(
+        { id: timerId },
+        { $set: { status: "dispatched", updatedAt: new Date().toISOString() } }
+      );
+      return {
+        success: true,
+        deliveredCount: 0,
+        reason: "No push subscriptions registered for user",
+      };
+    }
+
+    const title = notif.exerciseName
+      ? `Rest complete — ${notif.exerciseName}`
+      : "Rest complete! ⏱️";
+
+    const body = notif.nextSetNumber
+      ? `Ready for Set ${notif.nextSetNumber}`
+      : "Your rest window is complete. Ready for next set.";
+
+    const pushPayload = {
+      timerId,
+      title,
+      body,
+      url: notif.workoutUrl || "/",
+    };
+
+    let deliveredCount = 0;
+    for (const sub of subscriptions) {
+      const res = await sendPushToSubscription(sub, pushPayload);
+      if (res.success) {
+        deliveredCount++;
+      }
+    }
+
+    await col.updateOne(
+      { id: timerId },
+      {
+        $set: {
+          status: "dispatched",
+          updatedAt: new Date().toISOString(),
+        },
+      }
+    );
+
+    return { success: true, deliveredCount };
+  } catch (err: any) {
+    console.error(`Rest notification dispatch error for timer ${timerId}:`, err);
+    return { success: false, deliveredCount: 0, reason: err?.message };
+  }
+}
+
+/**
+ * Schedules a rest notification using the internal Node.js server timer
+ * with optional QStash fallback when QSTASH_TOKEN is configured.
+ */
+export async function scheduleServerRestTimer(params: {
+  timerId: string;
+  userId: string;
+  targetEpochMs: number;
+  callbackUrl?: string;
+}): Promise<{ scheduled: boolean; messageId?: string; error?: string }> {
+  const timers = getServerTimersMap();
+
+  // Cancel any prior timer for this timerId
+  cancelServerTimer(params.timerId);
+
+  const delayMs = Math.max(0, params.targetEpochMs - Date.now());
+
+  const timeout = setTimeout(async () => {
+    timers.delete(params.timerId);
+    try {
+      await executeRestNotificationDispatch(params.timerId, params.userId);
+    } catch (err) {
+      console.warn("Background push timer execution warning:", err);
+    }
+  }, delayMs);
+
+  if (typeof timeout.unref === "function") {
+    timeout.unref();
+  }
+
+  timers.set(params.timerId, timeout);
+
+  // If QStash token is configured, schedule with QStash as secondary redundant webhook
+  let qstashMessageId: string | undefined;
+  if (process.env.QSTASH_TOKEN && params.callbackUrl) {
+    const qstashRes = await scheduleDelayedPushWebhook({
+      timerId: params.timerId,
+      userId: params.userId,
+      targetEpochMs: params.targetEpochMs,
+      callbackUrl: params.callbackUrl,
+    });
+    if (qstashRes.scheduled) {
+      qstashMessageId = qstashRes.messageId;
+    }
+  }
+
+  return {
+    scheduled: true,
+    messageId: qstashMessageId || `server_${params.timerId}`,
+  };
+}
 
 let qstashClient: Client | null = null;
 
