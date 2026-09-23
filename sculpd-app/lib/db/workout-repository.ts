@@ -39,6 +39,26 @@ export async function getUserWorkoutSessions(
 }
 
 /**
+ * Retrieves all completed workout sessions for a user, ordered reverse chronologically (newest first).
+ * Strictly excludes unfinished (in_progress) and cancelled sessions.
+ */
+export async function getCompletedWorkoutSessions(
+  userId: string
+): Promise<WorkoutSession[]> {
+  assertUserId(userId);
+  const rawSessions = await db.workoutSessions
+    .where("[userId+status]")
+    .equals([userId, "completed"])
+    .toArray();
+
+  return rawSessions.sort((a, b) => {
+    const timeA = new Date(a.completedAt || a.startedAt).getTime();
+    const timeB = new Date(b.completedAt || b.startedAt).getTime();
+    return timeB - timeA;
+  });
+}
+
+/**
  * Retrieves a specific workout session by id, verifying user ownership.
  */
 export async function getWorkoutSessionById(

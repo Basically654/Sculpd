@@ -111,7 +111,7 @@ export default function DashboardClient() {
       <div>
         <UserBar />
 
-        {/* Header with Title and + Create Workout Button */}
+        {/* Header with Title, History Link, and + Create Workout Button */}
         <header className="pt-2 pb-5 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-black tracking-tight text-zinc-900 uppercase">
@@ -122,13 +122,37 @@ export default function DashboardClient() {
             </p>
           </div>
 
-          <Link
-            href="/workout/new"
-            className="h-9 px-3.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-xs tracking-wider flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
-          >
-            <span>+</span>
-            <span>Create Workout</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/history"
+              className="h-9 px-3 rounded-xl bg-stone-100 hover:bg-stone-200 border border-stone-200/80 text-zinc-800 font-mono text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer"
+              title="View Workout History"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+                className="w-3.5 h-3.5 text-stone-500"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span>History</span>
+            </Link>
+
+            <Link
+              href="/workout/new"
+              className="h-9 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-xs tracking-wider flex items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
+            >
+              <span>+</span>
+              <span>New</span>
+            </Link>
+          </div>
         </header>
 
         {/* Resume Unfinished Workout Banner */}

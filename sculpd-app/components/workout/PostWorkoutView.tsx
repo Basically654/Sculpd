@@ -205,8 +205,8 @@ export default function PostWorkoutView({
         </div>
       </div>
 
-      {/* Done Button */}
-      <div className="pt-6">
+      {/* Done & View in History Buttons */}
+      <div className="pt-6 space-y-2 font-mono">
         <button
           type="button"
           onClick={handleDone}
@@ -214,6 +214,25 @@ export default function PostWorkoutView({
           className="w-full h-12 rounded-xl bg-zinc-900 hover:bg-zinc-800 active:scale-[0.98] text-white font-mono font-bold uppercase tracking-wider text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
         >
           <span>Done • Return to Dashboard</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={async () => {
+            if (notes !== session.notes && onSaveNotes) {
+              try {
+                setIsSavingNotes(true);
+                await onSaveNotes(notes.trim());
+              } catch (err) {
+                console.warn("Failed to save notes:", err);
+              }
+            }
+            router.push(`/history/${session.id}`);
+          }}
+          disabled={isSavingNotes}
+          className="w-full h-10 rounded-xl bg-white border border-stone-200 hover:bg-stone-50 active:scale-[0.98] text-zinc-800 font-mono font-semibold uppercase tracking-wider text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
+        >
+          <span>View in History →</span>
         </button>
       </div>
     </main>
