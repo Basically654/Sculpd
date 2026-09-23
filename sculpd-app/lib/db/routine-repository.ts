@@ -10,6 +10,7 @@ import {
 } from "@/types/models";
 import { getExerciseById, seedExerciseCatalog } from "./exercise-repository";
 import { generateUUID } from "@/lib/crypto/uuid";
+import { resilientTransaction } from "./transaction";
 
 /**
  * Ensures a valid userId is provided before executing queries.
@@ -141,10 +142,20 @@ export const DEFAULT_EXERCISES: Exercise[] = [
 export async function seedDefaultCatalog(): Promise<void> {
   const routineCount = await db.routines.count();
   if (routineCount === 0) {
-    await db.transaction("rw", [db.routines, db.exercises], async () => {
-      await db.routines.bulkPut(DEFAULT_ROUTINES);
-      await db.exercises.bulkPut(DEFAULT_EXERCISES);
-    });
+    await resilientTransaction(
+      "seedDefaultCatalog",
+      [db.routines, db.exercises],
+      async () => {
+        await Promise.all([
+          db.routines.bulkPut(DEFAULT_ROUTINES),
+          db.exercises.bulkPut(DEFAULT_EXERCISES),
+        ]);
+      },
+      async () => {
+        await db.routines.bulkPut(DEFAULT_ROUTINES);
+        await db.exercises.bulkPut(DEFAULT_EXERCISES);
+      }
+    );
   }
 }
 
@@ -331,41 +342,50 @@ export async function createRoutine(
     updatedAt: now,
   }));
 
-  await db.transaction("rw", [db.routines, db.routineExercises, db.syncQueue], async () => {
-    await db.routines.add(routine);
-    if (configs.length > 0) {
-      await db.routineExercises.bulkAdd(configs);
-    }
+  const routineSyncItem: SyncQueueItem = {
+    id: generateUUID(),
+    userId,
+    operation: "insert",
+    collection: "routines",
+    entityId: routine.id,
+    payload: JSON.parse(JSON.stringify(routine)),
+    timestamp: Date.now(),
+    status: "pending",
+    attempts: 0,
+  };
 
-    // Queue sync mutations
-    const routineSyncItem: SyncQueueItem = {
-      id: generateUUID(),
-      userId,
-      operation: "insert",
-      collection: "routines",
-      entityId: routine.id,
-      payload: routine,
-      timestamp: Date.now(),
-      status: "pending",
-      attempts: 0,
-    };
-    await db.syncQueue.add(routineSyncItem);
+  const configSyncItems: SyncQueueItem[] = configs.map((cfg) => ({
+    id: generateUUID(),
+    userId,
+    operation: "insert",
+    collection: "routine_exercises",
+    entityId: cfg.id,
+    payload: JSON.parse(JSON.stringify(cfg)),
+    timestamp: Date.now(),
+    status: "pending",
+    attempts: 0,
+  }));
 
-    for (const cfg of configs) {
-      const cfgSyncItem: SyncQueueItem = {
-        id: generateUUID(),
-        userId,
-        operation: "insert",
-        collection: "routine_exercises",
-        entityId: cfg.id,
-        payload: cfg,
-        timestamp: Date.now(),
-        status: "pending",
-        attempts: 0,
-      };
-      await db.syncQueue.add(cfgSyncItem);
+  const allSyncItems = [routineSyncItem, ...configSyncItems];
+
+  await resilientTransaction(
+    "createRoutine",
+    [db.routines, db.routineExercises, db.syncQueue],
+    async () => {
+      await Promise.all([
+        db.routines.add(routine),
+        configs.length > 0 ? db.routineExercises.bulkAdd(configs) : Promise.resolve(),
+        db.syncQueue.bulkAdd(allSyncItems),
+      ]);
+    },
+    async () => {
+      await db.routines.add(routine);
+      if (configs.length > 0) {
+        await db.routineExercises.bulkAdd(configs);
+      }
+      await db.syncQueue.bulkAdd(allSyncItems);
     }
-  });
+  );
 
   return routine;
 }
@@ -407,83 +427,98 @@ export async function updateRoutine(
     updatedAt: now,
   };
 
-  await db.transaction("rw", [db.routines, db.routineExercises, db.syncQueue], async () => {
-    await db.routines.put(updatedRoutine);
+  const existingConfigs =
+    input.exercises !== undefined
+      ? await db.routineExercises.where("routineId").equals(routineId).toArray()
+      : [];
 
-    // Queue routine update
-    const routineSyncItem: SyncQueueItem = {
-      id: generateUUID(),
-      userId,
-      operation: "update",
-      collection: "routines",
-      entityId: updatedRoutine.id,
-      payload: updatedRoutine,
-      timestamp: Date.now(),
-      status: "pending",
-      attempts: 0,
-    };
-    await db.syncQueue.add(routineSyncItem);
+  const routineSyncItem: SyncQueueItem = {
+    id: generateUUID(),
+    userId,
+    operation: "update",
+    collection: "routines",
+    entityId: updatedRoutine.id,
+    payload: JSON.parse(JSON.stringify(updatedRoutine)),
+    timestamp: Date.now(),
+    status: "pending",
+    attempts: 0,
+  };
 
-    // If exercises list was provided, update configs
-    if (input.exercises !== undefined) {
-      const existingConfigs = await db.routineExercises
-        .where("routineId")
-        .equals(routineId)
-        .toArray();
+  const delSyncItems: SyncQueueItem[] = existingConfigs.map((oldCfg) => ({
+    id: generateUUID(),
+    userId,
+    operation: "delete",
+    collection: "routine_exercises",
+    entityId: oldCfg.id,
+    payload: { id: oldCfg.id },
+    timestamp: Date.now(),
+    status: "pending",
+    attempts: 0,
+  }));
 
-      // Delete existing configs
-      if (existingConfigs.length > 0) {
-        await db.routineExercises.where("routineId").equals(routineId).delete();
-        for (const oldCfg of existingConfigs) {
-          const delSync: SyncQueueItem = {
-            id: generateUUID(),
-            userId,
-            operation: "delete",
-            collection: "routine_exercises",
-            entityId: oldCfg.id,
-            payload: { id: oldCfg.id },
-            timestamp: Date.now(),
-            status: "pending",
-            attempts: 0,
-          };
-          await db.syncQueue.add(delSync);
+  const newConfigs: RoutineExerciseConfig[] = (input.exercises || []).map((item, index) => ({
+    id: item.id || generateUUID(),
+    routineId,
+    exerciseId: item.exerciseId,
+    displayOrder: index + 1,
+    targetSets: Number(item.targetSets) || 3,
+    targetReps: String(item.targetReps || "8-10").trim(),
+    restSeconds: Number(item.restSeconds) || 90,
+    loadType: item.loadType,
+    notes: item.notes?.trim() || undefined,
+    createdAt: now,
+    updatedAt: now,
+  }));
+
+  const addSyncItems: SyncQueueItem[] = newConfigs.map((cfg) => ({
+    id: generateUUID(),
+    userId,
+    operation: "insert",
+    collection: "routine_exercises",
+    entityId: cfg.id,
+    payload: JSON.parse(JSON.stringify(cfg)),
+    timestamp: Date.now(),
+    status: "pending",
+    attempts: 0,
+  }));
+
+  const allSyncItems = [
+    routineSyncItem,
+    ...(input.exercises !== undefined ? delSyncItems : []),
+    ...(input.exercises !== undefined ? addSyncItems : []),
+  ];
+
+  await resilientTransaction(
+    "updateRoutine",
+    [db.routines, db.routineExercises, db.syncQueue],
+    async () => {
+      const ops: Promise<any>[] = [
+        db.routines.put(updatedRoutine),
+        db.syncQueue.bulkAdd(allSyncItems),
+      ];
+      if (input.exercises !== undefined) {
+        if (existingConfigs.length > 0) {
+          ops.push(db.routineExercises.where("routineId").equals(routineId).delete());
+        }
+        if (newConfigs.length > 0) {
+          ops.push(db.routineExercises.bulkAdd(newConfigs));
         }
       }
-
-      // Add new configurations with proper displayOrder
-      const newConfigs: RoutineExerciseConfig[] = input.exercises.map((item, index) => ({
-        id: item.id || generateUUID(),
-        routineId,
-        exerciseId: item.exerciseId,
-        displayOrder: index + 1,
-        targetSets: Number(item.targetSets) || 3,
-        targetReps: String(item.targetReps || "8-10").trim(),
-        restSeconds: Number(item.restSeconds) || 90,
-        loadType: item.loadType,
-        notes: item.notes?.trim() || undefined,
-        createdAt: now,
-        updatedAt: now,
-      }));
-
-      if (newConfigs.length > 0) {
-        await db.routineExercises.bulkAdd(newConfigs);
-        for (const cfg of newConfigs) {
-          const addSync: SyncQueueItem = {
-            id: generateUUID(),
-            userId,
-            operation: "insert",
-            collection: "routine_exercises",
-            entityId: cfg.id,
-            payload: cfg,
-            timestamp: Date.now(),
-            status: "pending",
-            attempts: 0,
-          };
-          await db.syncQueue.add(addSync);
+      await Promise.all(ops);
+    },
+    async () => {
+      await db.routines.put(updatedRoutine);
+      if (input.exercises !== undefined) {
+        if (existingConfigs.length > 0) {
+          await db.routineExercises.where("routineId").equals(routineId).delete();
+        }
+        if (newConfigs.length > 0) {
+          await db.routineExercises.bulkAdd(newConfigs);
         }
       }
+      await db.syncQueue.bulkAdd(allSyncItems);
     }
-  });
+  );
 
   return updatedRoutine;
 }
@@ -501,39 +536,48 @@ export async function deleteRoutine(userId: string, routineId: string): Promise<
 
   const configs = await db.routineExercises.where("routineId").equals(routineId).toArray();
 
-  await db.transaction("rw", [db.routines, db.routineExercises, db.syncQueue], async () => {
-    await db.routines.delete(routineId);
-    await db.routineExercises.where("routineId").equals(routineId).delete();
+  const routineDel: SyncQueueItem = {
+    id: generateUUID(),
+    userId,
+    operation: "delete",
+    collection: "routines",
+    entityId: routineId,
+    payload: { id: routineId },
+    timestamp: Date.now(),
+    status: "pending",
+    attempts: 0,
+  };
 
-    // Queue sync deletions
-    const routineDel: SyncQueueItem = {
-      id: generateUUID(),
-      userId,
-      operation: "delete",
-      collection: "routines",
-      entityId: routineId,
-      payload: { id: routineId },
-      timestamp: Date.now(),
-      status: "pending",
-      attempts: 0,
-    };
-    await db.syncQueue.add(routineDel);
+  const cfgDels: SyncQueueItem[] = configs.map((cfg) => ({
+    id: generateUUID(),
+    userId,
+    operation: "delete",
+    collection: "routine_exercises",
+    entityId: cfg.id,
+    payload: { id: cfg.id },
+    timestamp: Date.now(),
+    status: "pending",
+    attempts: 0,
+  }));
 
-    for (const cfg of configs) {
-      const cfgDel: SyncQueueItem = {
-        id: generateUUID(),
-        userId,
-        operation: "delete",
-        collection: "routine_exercises",
-        entityId: cfg.id,
-        payload: { id: cfg.id },
-        timestamp: Date.now(),
-        status: "pending",
-        attempts: 0,
-      };
-      await db.syncQueue.add(cfgDel);
+  const allDels = [routineDel, ...cfgDels];
+
+  await resilientTransaction(
+    "deleteRoutine",
+    [db.routines, db.routineExercises, db.syncQueue],
+    async () => {
+      await Promise.all([
+        db.routines.delete(routineId),
+        db.routineExercises.where("routineId").equals(routineId).delete(),
+        db.syncQueue.bulkAdd(allDels),
+      ]);
+    },
+    async () => {
+      await db.routines.delete(routineId);
+      await db.routineExercises.where("routineId").equals(routineId).delete();
+      await db.syncQueue.bulkAdd(allDels);
     }
-  });
+  );
 
   return true;
 }
@@ -555,29 +599,42 @@ export async function reorderRoutineExercises(
   }
 
   const now = new Date().toISOString();
+  const configsToUpdate: RoutineExerciseConfig[] = [];
+  const syncItemsToQueue: SyncQueueItem[] = [];
 
-  await db.transaction("rw", [db.routineExercises, db.syncQueue], async () => {
-    for (let i = 0; i < orderedConfigIds.length; i++) {
-      const configId = orderedConfigIds[i];
-      const newOrder = i + 1;
-      const cfg = await db.routineExercises.get(configId);
-      if (cfg && cfg.routineId === routineId) {
-        const updatedCfg = { ...cfg, displayOrder: newOrder, updatedAt: now };
-        await db.routineExercises.put(updatedCfg);
-
-        const syncItem: SyncQueueItem = {
-          id: generateUUID(),
-          userId,
-          operation: "update",
-          collection: "routine_exercises",
-          entityId: cfg.id,
-          payload: updatedCfg,
-          timestamp: Date.now(),
-          status: "pending",
-          attempts: 0,
-        };
-        await db.syncQueue.add(syncItem);
-      }
+  for (let i = 0; i < orderedConfigIds.length; i++) {
+    const configId = orderedConfigIds[i];
+    const newOrder = i + 1;
+    const cfg = await db.routineExercises.get(configId);
+    if (cfg && cfg.routineId === routineId) {
+      const updatedCfg = { ...cfg, displayOrder: newOrder, updatedAt: now };
+      configsToUpdate.push(updatedCfg);
+      syncItemsToQueue.push({
+        id: generateUUID(),
+        userId,
+        operation: "update",
+        collection: "routine_exercises",
+        entityId: cfg.id,
+        payload: JSON.parse(JSON.stringify(updatedCfg)),
+        timestamp: Date.now(),
+        status: "pending",
+        attempts: 0,
+      });
     }
-  });
+  }
+
+  await resilientTransaction(
+    "reorderRoutineExercises",
+    [db.routineExercises, db.syncQueue],
+    async () => {
+      await Promise.all([
+        db.routineExercises.bulkPut(configsToUpdate),
+        db.syncQueue.bulkAdd(syncItemsToQueue),
+      ]);
+    },
+    async () => {
+      await db.routineExercises.bulkPut(configsToUpdate);
+      await db.syncQueue.bulkAdd(syncItemsToQueue);
+    }
+  );
 }

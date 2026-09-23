@@ -26,6 +26,7 @@ import {
 import {
   getUserById,
 } from "@/lib/db/user-repository";
+import { ensureDbOpen, isAbortOrConnectionError } from "@/lib/db/transaction";
 import { useTimer } from "@/components/timer/TimerContext";
 import { pushPendingMutations } from "@/lib/sync/sync-client";
 import { detectPersonalRecord, PRResult } from "@/lib/pr/pr-detector";
@@ -77,11 +78,13 @@ export function useWorkoutSession({
     const currentUserId = userId;
     let isMounted = true;
 
-    async function init() {
+    async function init(attempt = 1) {
       setIsLoading(true);
       setError(null);
 
       try {
+        await ensureDbOpen();
+
         // Ensure standard exercise library is seeded outside liveQuery
         await seedExerciseCatalog();
 
@@ -173,6 +176,16 @@ export function useWorkoutSession({
           }
         }
       } catch (err: any) {
+        if (isAbortOrConnectionError(err) && attempt < 3) {
+          console.warn(
+            `[useWorkoutSession] Init caught ${err?.name || "error"}, retrying (${attempt}/3)...`,
+            err
+          );
+          setTimeout(() => {
+            if (isMounted) init(attempt + 1);
+          }, 100 * attempt);
+          return;
+        }
         if (isMounted) {
           setError(err?.message || "Failed to initialize workout session.");
         }

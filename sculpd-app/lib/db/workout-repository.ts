@@ -13,6 +13,7 @@ import {
   getExercisesForRoutine,
 } from "./routine-repository";
 import { generateUUID } from "@/lib/crypto/uuid";
+import { resilientTransaction } from "./transaction";
 
 /**
  * Ensures a valid userId is provided before executing queries.
@@ -145,22 +146,32 @@ export async function startWorkoutSession(
     updatedAt: now,
   };
 
-  await db.transaction("rw", [db.workoutSessions, db.syncQueue], async () => {
-    await db.workoutSessions.add(session);
+  const syncItem: SyncQueueItem = {
+    id: generateUUID(),
+    userId,
+    operation: "insert",
+    collection: "workout_sessions",
+    entityId: session.id,
+    payload: JSON.parse(JSON.stringify(session)),
+    timestamp: Date.now(),
+    status: "pending",
+    attempts: 0,
+  };
 
-    const syncItem: SyncQueueItem = {
-      id: generateUUID(),
-      userId,
-      operation: "insert",
-      collection: "workout_sessions",
-      entityId: session.id,
-      payload: session,
-      timestamp: Date.now(),
-      status: "pending",
-      attempts: 0,
-    };
-    await db.syncQueue.add(syncItem);
-  });
+  await resilientTransaction(
+    "startWorkoutSession",
+    [db.workoutSessions, db.syncQueue],
+    async () => {
+      await Promise.all([
+        db.workoutSessions.add(session),
+        db.syncQueue.add(syncItem),
+      ]);
+    },
+    async () => {
+      await db.workoutSessions.add(session);
+      await db.syncQueue.add(syncItem);
+    }
+  );
 
   return session;
 }
@@ -195,22 +206,32 @@ export async function completeWorkoutSession(
     delete (updatedSession as any).notes;
   }
 
-  await db.transaction("rw", [db.workoutSessions, db.syncQueue], async () => {
-    await db.workoutSessions.put(updatedSession);
+  const syncItem: SyncQueueItem = {
+    id: generateUUID(),
+    userId,
+    operation: "update",
+    collection: "workout_sessions",
+    entityId: updatedSession.id,
+    payload: JSON.parse(JSON.stringify(updatedSession)),
+    timestamp: Date.now(),
+    status: "pending",
+    attempts: 0,
+  };
 
-    const syncItem: SyncQueueItem = {
-      id: generateUUID(),
-      userId,
-      operation: "update",
-      collection: "workout_sessions",
-      entityId: updatedSession.id,
-      payload: JSON.parse(JSON.stringify(updatedSession)),
-      timestamp: Date.now(),
-      status: "pending",
-      attempts: 0,
-    };
-    await db.syncQueue.add(syncItem);
-  });
+  await resilientTransaction(
+    "completeWorkoutSession",
+    [db.workoutSessions, db.syncQueue],
+    async () => {
+      await Promise.all([
+        db.workoutSessions.put(updatedSession),
+        db.syncQueue.add(syncItem),
+      ]);
+    },
+    async () => {
+      await db.workoutSessions.put(updatedSession);
+      await db.syncQueue.add(syncItem);
+    }
+  );
 
   return updatedSession;
 }
@@ -237,22 +258,32 @@ export async function cancelWorkoutSession(
     updatedAt: now,
   };
 
-  await db.transaction("rw", [db.workoutSessions, db.syncQueue], async () => {
-    await db.workoutSessions.put(updatedSession);
+  const syncItem: SyncQueueItem = {
+    id: generateUUID(),
+    userId,
+    operation: "update",
+    collection: "workout_sessions",
+    entityId: updatedSession.id,
+    payload: JSON.parse(JSON.stringify(updatedSession)),
+    timestamp: Date.now(),
+    status: "pending",
+    attempts: 0,
+  };
 
-    const syncItem: SyncQueueItem = {
-      id: generateUUID(),
-      userId,
-      operation: "update",
-      collection: "workout_sessions",
-      entityId: updatedSession.id,
-      payload: JSON.parse(JSON.stringify(updatedSession)),
-      timestamp: Date.now(),
-      status: "pending",
-      attempts: 0,
-    };
-    await db.syncQueue.add(syncItem);
-  });
+  await resilientTransaction(
+    "cancelWorkoutSession",
+    [db.workoutSessions, db.syncQueue],
+    async () => {
+      await Promise.all([
+        db.workoutSessions.put(updatedSession),
+        db.syncQueue.add(syncItem),
+      ]);
+    },
+    async () => {
+      await db.workoutSessions.put(updatedSession);
+      await db.syncQueue.add(syncItem);
+    }
+  );
 
   return updatedSession;
 }
@@ -378,22 +409,32 @@ export async function logUserSet(
     updatedAt: now,
   };
 
-  await db.transaction("rw", [db.sets, db.syncQueue], async () => {
-    await db.sets.add(newSet);
+  const syncItem: SyncQueueItem = {
+    id: generateUUID(),
+    userId,
+    operation: "insert",
+    collection: "sets",
+    entityId: newSet.id,
+    payload: JSON.parse(JSON.stringify(newSet)),
+    timestamp: Date.now(),
+    status: "pending",
+    attempts: 0,
+  };
 
-    const syncItem: SyncQueueItem = {
-      id: generateUUID(),
-      userId,
-      operation: "insert",
-      collection: "sets",
-      entityId: newSet.id,
-      payload: newSet,
-      timestamp: Date.now(),
-      status: "pending",
-      attempts: 0,
-    };
-    await db.syncQueue.add(syncItem);
-  });
+  await resilientTransaction(
+    "logUserSet",
+    [db.sets, db.syncQueue],
+    async () => {
+      await Promise.all([
+        db.sets.add(newSet),
+        db.syncQueue.add(syncItem),
+      ]);
+    },
+    async () => {
+      await db.sets.add(newSet);
+      await db.syncQueue.add(syncItem);
+    }
+  );
 
   return newSet;
 }
@@ -420,22 +461,32 @@ export async function deleteUserLastSet(
 
   const lastSet = existingSets[existingSets.length - 1];
 
-  await db.transaction("rw", [db.sets, db.syncQueue], async () => {
-    await db.sets.delete(lastSet.id);
+  const syncItem: SyncQueueItem = {
+    id: generateUUID(),
+    userId,
+    operation: "delete",
+    collection: "sets",
+    entityId: lastSet.id,
+    payload: { id: lastSet.id },
+    timestamp: Date.now(),
+    status: "pending",
+    attempts: 0,
+  };
 
-    const syncItem: SyncQueueItem = {
-      id: generateUUID(),
-      userId,
-      operation: "delete",
-      collection: "sets",
-      entityId: lastSet.id,
-      payload: { id: lastSet.id },
-      timestamp: Date.now(),
-      status: "pending",
-      attempts: 0,
-    };
-    await db.syncQueue.add(syncItem);
-  });
+  await resilientTransaction(
+    "deleteUserLastSet",
+    [db.sets, db.syncQueue],
+    async () => {
+      await Promise.all([
+        db.sets.delete(lastSet.id),
+        db.syncQueue.add(syncItem),
+      ]);
+    },
+    async () => {
+      await db.sets.delete(lastSet.id);
+      await db.syncQueue.add(syncItem);
+    }
+  );
 
   return true;
 }

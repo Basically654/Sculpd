@@ -3,6 +3,7 @@ import { db } from "./index";
 import { User, SafeUser, AvatarColor, SyncQueueItem } from "@/types/models";
 import { hashPin, verifyPin } from "@/lib/crypto/pin";
 import { generateUUID } from "@/lib/crypto/uuid";
+import { resilientTransaction } from "./transaction";
 
 /**
  * Strips sensitive cryptographic fields from a User object before returning to UI.
@@ -78,23 +79,32 @@ export async function createUser(input: CreateUserInput): Promise<SafeUser> {
     updatedAt: now,
   };
 
-  await db.transaction("rw", [db.users, db.syncQueue], async () => {
-    await db.users.add(newUser);
+  const syncItem: SyncQueueItem = {
+    id: generateUUID(),
+    userId: newUser.id,
+    operation: "insert",
+    collection: "users",
+    entityId: newUser.id,
+    payload: JSON.parse(JSON.stringify(newUser)),
+    timestamp: Date.now(),
+    status: "pending",
+    attempts: 0,
+  };
 
-    // Queue for cloud sync
-    const syncItem: SyncQueueItem = {
-      id: generateUUID(),
-      userId: newUser.id,
-      operation: "insert",
-      collection: "users",
-      entityId: newUser.id,
-      payload: newUser,
-      timestamp: Date.now(),
-      status: "pending",
-      attempts: 0,
-    };
-    await db.syncQueue.add(syncItem);
-  });
+  await resilientTransaction(
+    "createUser",
+    [db.users, db.syncQueue],
+    async () => {
+      await Promise.all([
+        db.users.add(newUser),
+        db.syncQueue.add(syncItem),
+      ]);
+    },
+    async () => {
+      await db.users.add(newUser);
+      await db.syncQueue.add(syncItem);
+    }
+  );
 
   return sanitizeUser(newUser);
 }
@@ -124,22 +134,32 @@ export async function updateUserBodyweight(
     updatedAt: now,
   };
 
-  await db.transaction("rw", [db.users, db.syncQueue], async () => {
-    await db.users.put(updatedUser);
+  const syncItem: SyncQueueItem = {
+    id: generateUUID(),
+    userId,
+    operation: "update",
+    collection: "users",
+    entityId: userId,
+    payload: JSON.parse(JSON.stringify(updatedUser)),
+    timestamp: Date.now(),
+    status: "pending",
+    attempts: 0,
+  };
 
-    const syncItem: SyncQueueItem = {
-      id: generateUUID(),
-      userId,
-      operation: "update",
-      collection: "users",
-      entityId: userId,
-      payload: updatedUser,
-      timestamp: Date.now(),
-      status: "pending",
-      attempts: 0,
-    };
-    await db.syncQueue.add(syncItem);
-  });
+  await resilientTransaction(
+    "updateUserBodyweight",
+    [db.users, db.syncQueue],
+    async () => {
+      await Promise.all([
+        db.users.put(updatedUser),
+        db.syncQueue.add(syncItem),
+      ]);
+    },
+    async () => {
+      await db.users.put(updatedUser);
+      await db.syncQueue.add(syncItem);
+    }
+  );
 
   return sanitizeUser(updatedUser);
 }
@@ -170,9 +190,18 @@ export async function authenticateUser(
 export async function deleteUser(userId: string): Promise<void> {
   if (!userId) return;
 
-  await db.transaction(
-    "rw",
+  await resilientTransaction(
+    "deleteUser",
     [db.users, db.workoutSessions, db.sets, db.syncQueue, db.syncMeta],
+    async () => {
+      await Promise.all([
+        db.users.delete(userId),
+        db.workoutSessions.where("userId").equals(userId).delete(),
+        db.sets.where("userId").equals(userId).delete(),
+        db.syncQueue.where("userId").equals(userId).delete(),
+        db.syncMeta.where("userId").equals(userId).delete(),
+      ]);
+    },
     async () => {
       await db.users.delete(userId);
       await db.workoutSessions.where("userId").equals(userId).delete();

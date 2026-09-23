@@ -122,13 +122,22 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
     return (
       <main className="min-h-screen bg-[#fafaf8] text-zinc-900 p-6 max-w-md mx-auto flex flex-col items-center justify-center text-center space-y-4 font-mono">
         <p className="text-rose-600 text-xs">{error || "Could not load workout."}</p>
-        <button
-          type="button"
-          onClick={() => router.push("/")}
-          className="px-4 py-2 rounded-xl bg-white border border-stone-300 text-xs uppercase text-zinc-800 shadow-xs"
-        >
-          Return to Dashboard
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 rounded-xl bg-zinc-900 text-white text-xs uppercase shadow-xs active:scale-95 transition-transform"
+          >
+            Retry
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push("/")}
+            className="px-4 py-2 rounded-xl bg-white border border-stone-300 text-xs uppercase text-zinc-800 shadow-xs active:scale-95 transition-transform"
+          >
+            Dashboard
+          </button>
+        </div>
       </main>
     );
   }

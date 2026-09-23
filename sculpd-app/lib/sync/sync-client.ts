@@ -1,5 +1,6 @@
 // lib/sync/sync-client.ts
 import { db } from "@/lib/db";
+import { ensureDbOpen } from "@/lib/db/transaction";
 import {
   SyncQueueItem,
   SyncPushPayload,
@@ -28,6 +29,8 @@ export async function pushPendingMutations(
   if (!userId || !sessionToken) {
     return { success: false, pushedCount: 0, error: "Missing authentication" };
   }
+
+  await ensureDbOpen();
 
   // Find all pending or failed items for this user
   const allUserItems = await db.syncQueue
@@ -133,6 +136,8 @@ export async function pullRemoteUpdates(
   if (!userId || !sessionToken) {
     return { success: false, pulledCount: 0, error: "Missing authentication" };
   }
+
+  await ensureDbOpen();
 
   try {
     const metaKey = `lastSync_${userId}`;

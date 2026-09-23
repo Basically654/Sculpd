@@ -1,6 +1,7 @@
 import { db } from "./index";
 import { Exercise, SyncQueueItem, ExerciseLoadType } from "@/types/models";
 import { generateUUID } from "@/lib/crypto/uuid";
+import { resilientTransaction, ensureDbOpen } from "./transaction";
 
 /**
  * Standard starter catalog of exercises across primary muscle groups.
@@ -131,6 +132,8 @@ export async function seedExerciseCatalog(): Promise<void> {
     updatedAt: timestamp,
   }));
 
+  await ensureDbOpen();
+
   // Always ensure all standard exercises exist in db.exercises
   await db.exercises.bulkPut(fullExercises);
 
@@ -138,15 +141,15 @@ export async function seedExerciseCatalog(): Promise<void> {
   try {
     const unCategorized = await db.exercises.filter((ex) => !ex.category || ex.category.trim() === "").toArray();
     if (unCategorized.length > 0) {
-      await db.transaction("rw", db.exercises, async () => {
-        for (const item of unCategorized) {
-          const inferred = inferCategoryAndEquipment(item.name);
-          await db.exercises.update(item.id, {
-            category: inferred.category,
-            equipment: item.equipment || inferred.equipment,
-          });
-        }
+      const updates = unCategorized.map((item) => {
+        const inferred = inferCategoryAndEquipment(item.name);
+        return {
+          ...item,
+          category: inferred.category,
+          equipment: item.equipment || inferred.equipment,
+        };
       });
+      await db.exercises.bulkPut(updates);
     }
   } catch (err) {
     console.warn("Non-fatal note while healing exercise categories:", err);
@@ -310,22 +313,32 @@ export async function createCustomExercise(
     updatedAt: now,
   };
 
-  await db.transaction("rw", [db.exercises, db.syncQueue], async () => {
-    await db.exercises.add(newExercise);
+  const syncItem: SyncQueueItem = {
+    id: generateUUID(),
+    userId,
+    operation: "insert",
+    collection: "exercises",
+    entityId: newExercise.id,
+    payload: JSON.parse(JSON.stringify(newExercise)),
+    timestamp: Date.now(),
+    status: "pending",
+    attempts: 0,
+  };
 
-    const syncItem: SyncQueueItem = {
-      id: generateUUID(),
-      userId,
-      operation: "insert",
-      collection: "exercises",
-      entityId: newExercise.id,
-      payload: newExercise,
-      timestamp: Date.now(),
-      status: "pending",
-      attempts: 0,
-    };
-    await db.syncQueue.add(syncItem);
-  });
+  await resilientTransaction(
+    "createCustomExercise",
+    [db.exercises, db.syncQueue],
+    async () => {
+      await Promise.all([
+        db.exercises.add(newExercise),
+        db.syncQueue.add(syncItem),
+      ]);
+    },
+    async () => {
+      await db.exercises.add(newExercise);
+      await db.syncQueue.add(syncItem);
+    }
+  );
 
   return newExercise;
 }
