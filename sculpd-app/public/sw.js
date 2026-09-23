@@ -1,12 +1,27 @@
 // public/sw.js
 // Sculp'd Gym-Floor PWA Service Worker (Web Push & Rest Timer)
 
+const CACHE_VERSION = "sculpd-v2";
+
 self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) => {
+        return Promise.all(
+          keys.map((key) => {
+            if (key !== CACHE_VERSION) {
+              return caches.delete(key);
+            }
+          })
+        );
+      })
+      .then(() => self.clients.claim())
+  );
 });
 
 /**

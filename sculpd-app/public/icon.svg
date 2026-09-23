@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="#0c0d10" rx="0" />
+  <g transform="translate(256, 256)">
+    <!-- Ambient Inner Glow -->
+    <path d="M 0,-140 L 90,-88 L 90,-20 L 20,20 L 90,60 L 90,140 L 0,192 L -90,140 L -90,72 L -20,32 L -90,-8 L -90,-88 Z"
+          fill="none" stroke="#10b981" stroke-width="12" opacity="0.3" filter="blur(8px)" />
+    
+    <!-- Outer Beveled Sculpted S Facets -->
+    <!-- Top Cap -->
+    <polygon points="0,-170 90,-118 45,-92 -45,-144" fill="#ffffff" />
+    <polygon points="0,-170 -90,-118 -45,-92 45,-144" fill="#d1d5db" />
+    
+    <!-- Top Right Facet -->
+    <polygon points="90,-118 90,-35 45,-60 45,-92" fill="#9ca3af" />
+    <!-- Inner Cut Top -->
+    <polygon points="90,-35 30,0 30,-25 45,-60" fill="#4b5563" />
+    <polygon points="30,0 -45,-42 -20,-55 30,-25" fill="#1f2937" />
+    
+    <!-- Center Diagonal Spine -->
+    <polygon points="-45,-42 45,10 20,25 -70,-28" fill="#e5e7eb" />
+    <polygon points="45,10 70,25 -20,78 -45,62" fill="#9ca3af" />
+    
+    <!-- Bottom Left Facet -->
+    <polygon points="-90,35 -90,118 -45,92 -45,60" fill="#6b7280" />
+    <!-- Inner Cut Bottom -->
+    <polygon points="-90,35 -30,0 -30,25 -45,60" fill="#374151" />
+    <polygon points="-30,0 45,42 20,55 -30,25" fill="#111827" />
+    
+    <!-- Bottom Cap -->
+    <polygon points="0,170 -90,118 -45,92 45,144" fill="#e5e7eb" />
+    <polygon points="0,170 90,118 45,92 -45,144" fill="#ffffff" />
+
+    <!-- Emerald Core Accent Ridge -->
+    <path d="M 0,-130 L 60,-95 L 60,-45 L -10,-5 L -10,35 L 60,75 L 0,110 L -60,75 L -60,25 L 10,-15 L 10,-55 L -60,-95 Z"
+          fill="none" stroke="#34d399" stroke-width="3" opacity="0.8" />
+  </g>
+</svg>

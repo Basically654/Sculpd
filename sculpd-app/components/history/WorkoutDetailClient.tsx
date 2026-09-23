@@ -72,15 +72,23 @@ export default function WorkoutDetailClient({
       <div className="space-y-6">
         <UserBar />
 
-        {/* Back link to History */}
-        <div>
+        {/* Navigation row */}
+        <div className="flex items-center justify-between text-xs font-mono">
           <Link
             href="/history"
-            className="text-stone-400 hover:text-zinc-900 text-xs font-mono uppercase font-bold inline-flex items-center gap-1 transition-colors p-1 -m-1"
+            className="text-stone-400 hover:text-zinc-900 uppercase font-bold inline-flex items-center gap-1 transition-colors p-1 -m-1"
             title="Return to History"
           >
             <span>←</span>
             <span>Back to History</span>
+          </Link>
+          <Link
+            href="/analytics"
+            className="text-stone-400 hover:text-zinc-900 uppercase font-bold inline-flex items-center gap-1 transition-colors p-1 -m-1"
+            title="View Training Analytics"
+          >
+            <span>Analytics</span>
+            <span>→</span>
           </Link>
         </div>
 
@@ -198,9 +206,14 @@ export default function WorkoutDetailClient({
               className="p-4 rounded-2xl bg-white border border-stone-200 shadow-xs space-y-2.5"
             >
               <div className="flex items-baseline justify-between">
-                <h2 className="text-sm font-black uppercase tracking-tight text-zinc-950 font-mono">
-                  {ex.exerciseName}
-                </h2>
+                <Link
+                  href={`/analytics?exerciseId=${ex.exerciseId}`}
+                  className="text-sm font-black uppercase tracking-tight text-zinc-950 font-mono hover:text-stone-600 transition-colors inline-flex items-center gap-1 group"
+                  title="View Exercise Progression Telemetry"
+                >
+                  <span>{ex.exerciseName}</span>
+                  <span className="text-stone-400 group-hover:text-zinc-900 text-[10px]">↗</span>
+                </Link>
                 {ex.isBodyweight && (
                   <span className="text-[9px] font-mono uppercase bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded font-semibold">
                     Bodyweight

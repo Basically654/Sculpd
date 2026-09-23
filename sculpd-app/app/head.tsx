@@ -10,7 +10,7 @@ export default function Head() {
         content="black-translucent"
       />
       <link rel="manifest" href="/manifest.json" />
-      <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+      <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
       <link rel="icon" href="/icon.png" />
       <link rel="mask-icon" href="/icon.svg" color="#000000" />
       <link

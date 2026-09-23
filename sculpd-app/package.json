@@ -17,7 +17,8 @@
     "test:webkit": "tsx test/webkit-transaction-resilience.test.ts",
     "test:multiset": "tsx test/multi-set-clarity.test.ts",
     "test:history": "tsx test/workout-history.test.ts",
-    "test": "tsx test/phase2-identity-isolation.test.ts && tsx test/phase3-sync-engine.test.ts && tsx test/phase4-gym-floor-workout.test.ts && tsx test/phase5-workout-overhaul.test.ts && tsx test/pr-detection.test.ts && tsx test/rest-timer-notifications.test.ts && tsx test/bodyweight-exercises.test.ts && tsx test/webkit-transaction-resilience.test.ts && tsx test/multi-set-clarity.test.ts && tsx test/workout-history.test.ts"
+    "test:analytics": "tsx test/training-analytics.test.ts",
+    "test": "tsx test/phase2-identity-isolation.test.ts && tsx test/phase3-sync-engine.test.ts && tsx test/phase4-gym-floor-workout.test.ts && tsx test/phase5-workout-overhaul.test.ts && tsx test/pr-detection.test.ts && tsx test/rest-timer-notifications.test.ts && tsx test/bodyweight-exercises.test.ts && tsx test/webkit-transaction-resilience.test.ts && tsx test/multi-set-clarity.test.ts && tsx test/workout-history.test.ts && tsx test/training-analytics.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.0",

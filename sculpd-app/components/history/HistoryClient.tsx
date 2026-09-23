@@ -60,14 +60,22 @@ export default function HistoryClient() {
 
         {/* Header with Back button to Dashboard */}
         <header className="pt-2 pb-4">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center justify-between mb-2 text-xs font-mono">
             <Link
               href="/"
-              className="text-stone-400 hover:text-zinc-900 text-xs font-mono uppercase font-bold flex items-center gap-1 transition-colors p-1 -m-1"
+              className="text-stone-400 hover:text-zinc-900 uppercase font-bold flex items-center gap-1 transition-colors p-1 -m-1"
               title="Return to Dashboard"
             >
               <span>←</span>
               <span>Dashboard</span>
+            </Link>
+            <Link
+              href="/analytics"
+              className="text-stone-400 hover:text-zinc-900 uppercase font-bold flex items-center gap-1 transition-colors p-1 -m-1"
+              title="View Training Analytics"
+            >
+              <span>Analytics</span>
+              <span>→</span>
             </Link>
           </div>
 

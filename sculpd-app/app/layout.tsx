@@ -19,23 +19,16 @@ export const metadata: Metadata = {
   title: "Sculp’d",
   description: "High-Efficiency Workout Tracker",
   manifest: "/manifest.json",
-  icons: [
-    {
-      rel: "icon",
-      url: "/icon-192.png",
-      sizes: "192x192",
-    },
-    {
-      rel: "icon",
-      url: "/icon-512.png",
-      sizes: "512x512",
-    },
-    {
-      rel: "apple-touch-icon",
-      url: "/apple-touch-icon.png",
-      sizes: "180x180",
-    },
-  ],
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
   ),
