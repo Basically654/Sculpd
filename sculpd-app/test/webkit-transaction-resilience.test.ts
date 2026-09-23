@@ -46,6 +46,14 @@ async function runWebKitResilienceTests() {
   const closingMsg = new Error("The database connection is closing");
   assert(isAbortOrConnectionError(closingMsg), "Detects connection closing message");
 
+  const cantOpenError = new Error("UnknownError: Unable to open database file on disk");
+  cantOpenError.name = "UnknownError";
+  assert(isAbortOrConnectionError(cantOpenError), "Detects WebKit UnknownError / Unable to open database file on disk");
+
+  const openFailedError = new Error("OpenFailedError: Database open failed");
+  openFailedError.name = "OpenFailedError";
+  assert(isAbortOrConnectionError(openFailedError), "Detects Dexie OpenFailedError");
+
   const genuineValidationError = new Error("Validation Error: Routine name cannot be empty");
   assert(!isAbortOrConnectionError(genuineValidationError), "Does NOT flag genuine application validation errors");
 

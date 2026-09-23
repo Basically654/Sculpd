@@ -16,6 +16,7 @@ import {
   createUser,
   updateUserBodyweight,
 } from "@/lib/db/user-repository";
+import { migrateV2ToV3IfNeeded } from "@/lib/db/index";
 
 const SESSION_STORAGE_KEY = "sculpd_active_user_id";
 const TOKEN_STORAGE_KEY = "sculpd_session_token";
@@ -67,6 +68,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     async function initSession() {
       setIsLoading(true);
       try {
+        await migrateV2ToV3IfNeeded();
         const users = await listSafeUsers();
         setAllProfiles(users);
 

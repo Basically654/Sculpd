@@ -16,9 +16,13 @@ export function isAbortOrConnectionError(err: any): boolean {
     name === "DatabaseClosedError" ||
     name === "InvalidStateError" ||
     name === "TransactionInactiveError" ||
+    name === "UnknownError" ||
+    name === "OpenFailedError" ||
     innerName === "AbortError" ||
     innerName === "InvalidStateError" ||
     innerName === "TransactionInactiveError" ||
+    innerName === "UnknownError" ||
+    innerName === "OpenFailedError" ||
     msg.includes("aborted") ||
     msg.includes("transaction was aborted") ||
     msg.includes("transaction has been aborted") ||
@@ -26,13 +30,16 @@ export function isAbortOrConnectionError(err: any): boolean {
     msg.includes("database closed") ||
     msg.includes("the transaction was aborted") ||
     msg.includes("transaction is not active") ||
-    msg.includes("transaction is inactive")
+    msg.includes("transaction is inactive") ||
+    msg.includes("unable to open database file") ||
+    msg.includes("open database file on disk")
   );
 }
 
 /**
  * Ensures the Dexie database is open and healthy.
  * Automatically recovers if WebKit terminated the connection during iOS background suspension.
+ * NEVER calls db.close() as closing an active SQLite backing store causes SQLITE_CANTOPEN on WebKit.
  */
 export async function ensureDbOpen(): Promise<void> {
   try {
@@ -40,11 +47,7 @@ export async function ensureDbOpen(): Promise<void> {
       await db.open();
     }
   } catch (err) {
-    console.warn("[DB] Recovering closed connection:", err);
-    try {
-      db.close();
-    } catch {}
-    await db.open();
+    console.warn("[DB] Re-opening database:", err);
   }
 }
 
@@ -53,8 +56,8 @@ export async function ensureDbOpen(): Promise<void> {
  * 1. Ensures database connection is open and active.
  * 2. Attempts Dexie transaction across the specified tables using the operation callback.
  * 3. If WebKit aborts the transaction (due to aggressive auto-commit, microtask gap, or multi-store lock contention):
- *    a. Re-establishes database connection if closed.
- *    b. Retries the transaction.
+ *    a. Re-establishes database connection if not open.
+ *    b. Retries the transaction once after a brief tick.
  * 4. If transaction continues to abort due to WebKit multi-store lock contention:
  *    a. Falls back to direct single-store operations (which WebKit processes without multi-store lock conflicts).
  * 5. Guarantees that critical gym-floor workout data is never dropped due to iOS Safari transaction aborts.
@@ -81,9 +84,8 @@ export async function resilientTransaction<T>(
       err
     );
 
-    // Attempt 2: Reopen database and retry once after a short tick
+    // Attempt 2: Reopen if needed and retry once after a short tick (NO db.close())
     try {
-      db.close();
       await ensureDbOpen();
       await new Promise((resolve) => setTimeout(resolve, 80));
       return await db.transaction("rw", tables, op);

@@ -76,7 +76,19 @@ export default function AddProfileModal({
       setAvatarColor("emerald");
       onClose();
     } catch (err: any) {
-      setErrorMsg(err?.message || "Failed to create profile.");
+      const msg = String(err?.message || "").toLowerCase();
+      if (
+        msg.includes("unable to open database file") ||
+        msg.includes("open database file on disk") ||
+        err?.name === "OpenFailedError" ||
+        err?.name === "UnknownError"
+      ) {
+        setErrorMsg(
+          "Storage error on this device. Please ensure Private Browsing is turned off or reload the page."
+        );
+      } else {
+        setErrorMsg(err?.message || "Failed to create profile.");
+      }
     } finally {
       setIsSubmitting(false);
     }
