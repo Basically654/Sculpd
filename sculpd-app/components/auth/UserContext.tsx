@@ -14,6 +14,7 @@ import {
   getSafeUserById,
   authenticateUser,
   createUser,
+  updateUserBodyweight,
 } from "@/lib/db/user-repository";
 
 const SESSION_STORAGE_KEY = "sculpd_active_user_id";
@@ -35,8 +36,10 @@ interface UserContextValue {
   createProfile: (
     displayName: string,
     pin: string,
-    avatarColor?: AvatarColor
+    avatarColor?: AvatarColor,
+    bodyweight?: number
   ) => Promise<SafeUser>;
+  updateBodyweight: (bodyweight: number) => Promise<SafeUser>;
 }
 
 const UserContext = createContext<UserContextValue | null>(null);
@@ -179,18 +182,33 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     async (
       displayName: string,
       pin: string,
-      avatarColor?: AvatarColor
+      avatarColor?: AvatarColor,
+      bodyweight?: number
     ): Promise<SafeUser> => {
       const newUser = await createUser({
         displayName,
         pin,
         avatarColor,
+        bodyweight,
       });
 
       await refreshProfiles();
       return newUser;
     },
     [refreshProfiles]
+  );
+
+  const updateBodyweight = useCallback(
+    async (bodyweight: number): Promise<SafeUser> => {
+      if (!activeUserId) {
+        throw new Error("No active user to update bodyweight.");
+      }
+      const updated = await updateUserBodyweight(activeUserId, bodyweight);
+      setActiveUser(updated);
+      await refreshProfiles();
+      return updated;
+    },
+    [activeUserId, refreshProfiles]
   );
 
   return (
@@ -206,6 +224,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         switchUser,
         refreshProfiles,
         createProfile,
+        updateBodyweight,
       }}
     >
       {children}

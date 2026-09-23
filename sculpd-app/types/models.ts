@@ -2,12 +2,15 @@
 
 export type AvatarColor = "emerald" | "amber" | "violet" | "cyan" | "rose" | "blue" | "fuchsia";
 
+export type ExerciseLoadType = "weighted" | "bodyweight";
+
 export interface User {
   id: string; // UUIDv4
   displayName: string;
   pinHash: string;
   pinSalt: string;
   avatarColor: AvatarColor;
+  bodyweight?: number | null; // Profile bodyweight in lbs, e.g. 195
   createdAt: string; // ISO 8601
   updatedAt: string; // ISO 8601
   isDeleted?: boolean;
@@ -27,6 +30,7 @@ export interface Exercise {
   name: string;
   category?: string; // Muscle group: e.g. "Chest", "Back", "Legs", "Shoulders", "Arms", "Core"
   equipment?: string; // e.g. "Barbell", "Dumbbell", "Cable", "Machine", "Bodyweight"
+  loadType?: ExerciseLoadType; // "weighted" | "bodyweight"
   userId?: string | null; // null for standard library, userId for custom user exercises
   createdAt: string; // ISO 8601
   updatedAt: string; // ISO 8601
@@ -71,6 +75,7 @@ export interface RoutineExerciseConfig {
   targetSets: number;
   targetReps: string; // Rep target or rep range, e.g. "5-8" or "8-10"
   restSeconds: number; // Rest duration in seconds, e.g. 90
+  loadType?: ExerciseLoadType; // "weighted" | "bodyweight"
   notes?: string; // Optional coaching cue or execution notes
   createdAt: string; // ISO 8601
   updatedAt: string; // ISO 8601
@@ -97,6 +102,7 @@ export interface WorkoutSessionExerciseSnapshot {
   targetSets: number;
   targetReps: string;
   restSeconds: number;
+  loadType?: ExerciseLoadType;
   notes?: string;
 }
 
@@ -123,6 +129,8 @@ export interface WorkoutSet {
   weight: number;
   reps: number;
   rpe: number | null;
+  bodyweight?: number | null; // Captured user bodyweight at time of set (for bodyweight exercises)
+  addedWeight?: number | null; // Additional load in lbs (e.g. 15 for BW+15, or 0)
   createdAt: string; // ISO 8601
   updatedAt: string; // ISO 8601
   isDeleted?: boolean;

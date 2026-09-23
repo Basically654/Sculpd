@@ -100,6 +100,12 @@ export async function startWorkoutSession(
       targetSets: item.targetSets,
       targetReps: item.targetReps,
       restSeconds: item.restSeconds,
+      loadType:
+        item.loadType ||
+        item.exercise?.loadType ||
+        (item.exercise?.equipment?.toLowerCase() === "bodyweight"
+          ? "bodyweight"
+          : "weighted"),
       notes: item.notes,
     }));
   } else {
@@ -116,6 +122,11 @@ export async function startWorkoutSession(
         targetSets: ex.targetSets ?? 3,
         targetReps: ex.targetReps ?? "8-10",
         restSeconds: 90,
+        loadType:
+          ex.loadType ||
+          (ex.equipment?.toLowerCase() === "bodyweight"
+            ? "bodyweight"
+            : "weighted"),
         notes: ex.coachingCue || undefined,
       }));
     }
@@ -330,7 +341,9 @@ export async function logUserSet(
   exerciseId: string,
   weight: number,
   reps: number,
-  rpe?: number | null
+  rpe?: number | null,
+  bodyweight?: number | null,
+  addedWeight?: number | null
 ): Promise<WorkoutSet> {
   assertUserId(userId);
 
@@ -359,6 +372,8 @@ export async function logUserSet(
     weight,
     reps,
     rpe: rpe ?? null,
+    ...(typeof bodyweight === "number" ? { bodyweight } : {}),
+    ...(typeof addedWeight === "number" ? { addedWeight } : {}),
     createdAt: now,
     updatedAt: now,
   };

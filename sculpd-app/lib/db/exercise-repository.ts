@@ -1,6 +1,5 @@
-// lib/db/exercise-repository.ts
 import { db } from "./index";
-import { Exercise, SyncQueueItem } from "@/types/models";
+import { Exercise, SyncQueueItem, ExerciseLoadType } from "@/types/models";
 import { generateUUID } from "@/lib/crypto/uuid";
 
 /**
@@ -9,76 +8,76 @@ import { generateUUID } from "@/lib/crypto/uuid";
  */
 export const STANDARD_EXERCISES: Omit<Exercise, "createdAt" | "updatedAt">[] = [
   // --- Chest ---
-  { id: "std_ex_bench_press", name: "Barbell Bench Press", category: "Chest", equipment: "Barbell", userId: null },
-  { id: "std_ex_incline_bb_press", name: "Incline Barbell Bench Press", category: "Chest", equipment: "Barbell", userId: null },
-  { id: "std_ex_db_bench_press", name: "Flat Dumbbell Bench Press", category: "Chest", equipment: "Dumbbell", userId: null },
-  { id: "std_ex_incline_db_press", name: "Incline Dumbbell Press", category: "Chest", equipment: "Dumbbell", userId: null },
-  { id: "std_ex_cable_fly", name: "Cable Chest Fly", category: "Chest", equipment: "Cable", userId: null },
-  { id: "std_ex_pec_deck", name: "Pec Deck Machine Fly", category: "Chest", equipment: "Machine", userId: null },
-  { id: "std_ex_chest_press_machine", name: "Chest Press Machine", category: "Chest", equipment: "Machine", userId: null },
-  { id: "std_ex_push_ups", name: "Push-Ups", category: "Chest", equipment: "Bodyweight", userId: null },
-  { id: "std_ex_dips", name: "Chest Dips", category: "Chest", equipment: "Bodyweight", userId: null },
+  { id: "std_ex_bench_press", name: "Barbell Bench Press", category: "Chest", equipment: "Barbell", loadType: "weighted", userId: null },
+  { id: "std_ex_incline_bb_press", name: "Incline Barbell Bench Press", category: "Chest", equipment: "Barbell", loadType: "weighted", userId: null },
+  { id: "std_ex_db_bench_press", name: "Flat Dumbbell Bench Press", category: "Chest", equipment: "Dumbbell", loadType: "weighted", userId: null },
+  { id: "std_ex_incline_db_press", name: "Incline Dumbbell Press", category: "Chest", equipment: "Dumbbell", loadType: "weighted", userId: null },
+  { id: "std_ex_cable_fly", name: "Cable Chest Fly", category: "Chest", equipment: "Cable", loadType: "weighted", userId: null },
+  { id: "std_ex_pec_deck", name: "Pec Deck Machine Fly", category: "Chest", equipment: "Machine", loadType: "weighted", userId: null },
+  { id: "std_ex_chest_press_machine", name: "Chest Press Machine", category: "Chest", equipment: "Machine", loadType: "weighted", userId: null },
+  { id: "std_ex_push_ups", name: "Push-Ups", category: "Chest", equipment: "Bodyweight", loadType: "bodyweight", userId: null },
+  { id: "std_ex_dips", name: "Chest Dips", category: "Chest", equipment: "Bodyweight", loadType: "bodyweight", userId: null },
 
   // --- Back ---
-  { id: "std_ex_deadlift", name: "Barbell Deadlift", category: "Back", equipment: "Barbell", userId: null },
-  { id: "std_ex_trap_bar_deadlift", name: "Trap Bar Deadlift", category: "Back", equipment: "Barbell", userId: null },
-  { id: "std_ex_lat_pulldown", name: "Neutral Grip Lat Pulldown", category: "Back", equipment: "Cable", userId: null },
-  { id: "std_ex_wide_lat_pulldown", name: "Wide-Grip Lat Pulldown", category: "Back", equipment: "Cable", userId: null },
-  { id: "std_ex_bent_over_row", name: "Barbell Bent-Over Row", category: "Back", equipment: "Barbell", userId: null },
-  { id: "std_ex_db_row", name: "Single-Arm Dumbbell Row", category: "Back", equipment: "Dumbbell", userId: null },
-  { id: "std_ex_seated_cable_row", name: "Seated Cable Row", category: "Back", equipment: "Cable", userId: null },
-  { id: "std_ex_t_bar_row", name: "T-Bar Row", category: "Back", equipment: "Barbell", userId: null },
-  { id: "std_ex_pull_ups", name: "Pull-Ups", category: "Back", equipment: "Bodyweight", userId: null },
-  { id: "std_ex_chin_ups", name: "Chin-Ups", category: "Back", equipment: "Bodyweight", userId: null },
-  { id: "std_ex_hyperextension", name: "Hyperextension (45° Back Extension)", category: "Back", equipment: "Bodyweight", userId: null },
+  { id: "std_ex_deadlift", name: "Barbell Deadlift", category: "Back", equipment: "Barbell", loadType: "weighted", userId: null },
+  { id: "std_ex_trap_bar_deadlift", name: "Trap Bar Deadlift", category: "Back", equipment: "Barbell", loadType: "weighted", userId: null },
+  { id: "std_ex_lat_pulldown", name: "Neutral Grip Lat Pulldown", category: "Back", equipment: "Cable", loadType: "weighted", userId: null },
+  { id: "std_ex_wide_lat_pulldown", name: "Wide-Grip Lat Pulldown", category: "Back", equipment: "Cable", loadType: "weighted", userId: null },
+  { id: "std_ex_bent_over_row", name: "Barbell Bent-Over Row", category: "Back", equipment: "Barbell", loadType: "weighted", userId: null },
+  { id: "std_ex_db_row", name: "Single-Arm Dumbbell Row", category: "Back", equipment: "Dumbbell", loadType: "weighted", userId: null },
+  { id: "std_ex_seated_cable_row", name: "Seated Cable Row", category: "Back", equipment: "Cable", loadType: "weighted", userId: null },
+  { id: "std_ex_t_bar_row", name: "T-Bar Row", category: "Back", equipment: "Barbell", loadType: "weighted", userId: null },
+  { id: "std_ex_pull_ups", name: "Pull-Ups", category: "Back", equipment: "Bodyweight", loadType: "bodyweight", userId: null },
+  { id: "std_ex_chin_ups", name: "Chin-Ups", category: "Back", equipment: "Bodyweight", loadType: "bodyweight", userId: null },
+  { id: "std_ex_hyperextension", name: "Hyperextension (45° Back Extension)", category: "Back", equipment: "Bodyweight", loadType: "bodyweight", userId: null },
 
   // --- Legs ---
-  { id: "std_ex_squat", name: "Barbell Back Squat", category: "Legs", equipment: "Barbell", userId: null },
-  { id: "std_ex_front_squat", name: "Barbell Front Squat", category: "Legs", equipment: "Barbell", userId: null },
-  { id: "std_ex_romanian_deadlift", name: "Romanian Deadlift", category: "Legs", equipment: "Barbell", userId: null },
-  { id: "std_ex_db_rdl", name: "Romanian Deadlift (Dumbbell)", category: "Legs", equipment: "Dumbbell", userId: null },
-  { id: "std_ex_leg_press", name: "Leg Press", category: "Legs", equipment: "Machine", userId: null },
-  { id: "std_ex_hack_squat", name: "Hack Squat", category: "Legs", equipment: "Machine", userId: null },
-  { id: "std_ex_bulgarian_split_squat", name: "Bulgarian Split Squat", category: "Legs", equipment: "Dumbbell", userId: null },
-  { id: "std_ex_walking_lunge", name: "Walking Dumbbell Lunge", category: "Legs", equipment: "Dumbbell", userId: null },
-  { id: "std_ex_leg_extension", name: "Leg Extension", category: "Legs", equipment: "Machine", userId: null },
-  { id: "std_ex_seated_leg_curl", name: "Seated Leg Curl", category: "Legs", equipment: "Machine", userId: null },
-  { id: "std_ex_lying_leg_curl", name: "Lying Leg Curl", category: "Legs", equipment: "Machine", userId: null },
-  { id: "std_ex_standing_calf_raise", name: "Standing Calf Raise", category: "Legs", equipment: "Machine", userId: null },
-  { id: "std_ex_seated_calf_raise", name: "Seated Calf Raise", category: "Legs", equipment: "Machine", userId: null },
-  { id: "std_ex_hip_thrust", name: "Barbell Hip Thrust", category: "Legs", equipment: "Barbell", userId: null },
-  { id: "std_ex_cable_kickback", name: "Cable Glute Kickback", category: "Legs", equipment: "Cable", userId: null },
+  { id: "std_ex_squat", name: "Barbell Back Squat", category: "Legs", equipment: "Barbell", loadType: "weighted", userId: null },
+  { id: "std_ex_front_squat", name: "Barbell Front Squat", category: "Legs", equipment: "Barbell", loadType: "weighted", userId: null },
+  { id: "std_ex_romanian_deadlift", name: "Romanian Deadlift", category: "Legs", equipment: "Barbell", loadType: "weighted", userId: null },
+  { id: "std_ex_db_rdl", name: "Romanian Deadlift (Dumbbell)", category: "Legs", equipment: "Dumbbell", loadType: "weighted", userId: null },
+  { id: "std_ex_leg_press", name: "Leg Press", category: "Legs", equipment: "Machine", loadType: "weighted", userId: null },
+  { id: "std_ex_hack_squat", name: "Hack Squat", category: "Legs", equipment: "Machine", loadType: "weighted", userId: null },
+  { id: "std_ex_bulgarian_split_squat", name: "Bulgarian Split Squat", category: "Legs", equipment: "Dumbbell", loadType: "weighted", userId: null },
+  { id: "std_ex_walking_lunge", name: "Walking Dumbbell Lunge", category: "Legs", equipment: "Dumbbell", loadType: "weighted", userId: null },
+  { id: "std_ex_leg_extension", name: "Leg Extension", category: "Legs", equipment: "Machine", loadType: "weighted", userId: null },
+  { id: "std_ex_seated_leg_curl", name: "Seated Leg Curl", category: "Legs", equipment: "Machine", loadType: "weighted", userId: null },
+  { id: "std_ex_lying_leg_curl", name: "Lying Leg Curl", category: "Legs", equipment: "Machine", loadType: "weighted", userId: null },
+  { id: "std_ex_standing_calf_raise", name: "Standing Calf Raise", category: "Legs", equipment: "Machine", loadType: "weighted", userId: null },
+  { id: "std_ex_seated_calf_raise", name: "Seated Calf Raise", category: "Legs", equipment: "Machine", loadType: "weighted", userId: null },
+  { id: "std_ex_hip_thrust", name: "Barbell Hip Thrust", category: "Legs", equipment: "Barbell", loadType: "weighted", userId: null },
+  { id: "std_ex_cable_kickback", name: "Cable Glute Kickback", category: "Legs", equipment: "Cable", loadType: "weighted", userId: null },
 
   // --- Shoulders ---
-  { id: "std_ex_overhead_press", name: "Overhead Barbell Press", category: "Shoulders", equipment: "Barbell", userId: null },
-  { id: "std_ex_db_shoulder_press", name: "Dumbbell Shoulder Press", category: "Shoulders", equipment: "Dumbbell", userId: null },
-  { id: "std_ex_arnold_press", name: "Arnold Press", category: "Shoulders", equipment: "Dumbbell", userId: null },
-  { id: "std_ex_lateral_raise", name: "Dumbbell Lateral Raise", category: "Shoulders", equipment: "Dumbbell", userId: null },
-  { id: "std_ex_cable_lateral_raise", name: "Cable Lateral Raise", category: "Shoulders", equipment: "Cable", userId: null },
-  { id: "std_ex_face_pull", name: "Cable Face Pull", category: "Shoulders", equipment: "Cable", userId: null },
-  { id: "std_ex_reverse_pec_deck", name: "Reverse Pec Deck (Rear Delt)", category: "Shoulders", equipment: "Machine", userId: null },
-  { id: "std_ex_db_shrug", name: "Dumbbell Shrug", category: "Shoulders", equipment: "Dumbbell", userId: null },
+  { id: "std_ex_overhead_press", name: "Overhead Barbell Press", category: "Shoulders", equipment: "Barbell", loadType: "weighted", userId: null },
+  { id: "std_ex_db_shoulder_press", name: "Dumbbell Shoulder Press", category: "Shoulders", equipment: "Dumbbell", loadType: "weighted", userId: null },
+  { id: "std_ex_arnold_press", name: "Arnold Press", category: "Shoulders", equipment: "Dumbbell", loadType: "weighted", userId: null },
+  { id: "std_ex_lateral_raise", name: "Dumbbell Lateral Raise", category: "Shoulders", equipment: "Dumbbell", loadType: "weighted", userId: null },
+  { id: "std_ex_cable_lateral_raise", name: "Cable Lateral Raise", category: "Shoulders", equipment: "Cable", loadType: "weighted", userId: null },
+  { id: "std_ex_face_pull", name: "Cable Face Pull", category: "Shoulders", equipment: "Cable", loadType: "weighted", userId: null },
+  { id: "std_ex_reverse_pec_deck", name: "Reverse Pec Deck (Rear Delt)", category: "Shoulders", equipment: "Machine", loadType: "weighted", userId: null },
+  { id: "std_ex_db_shrug", name: "Dumbbell Shrug", category: "Shoulders", equipment: "Dumbbell", loadType: "weighted", userId: null },
 
   // --- Arms ---
-  { id: "std_ex_db_bicep_curl", name: "Dumbbell Bicep Curl", category: "Arms", equipment: "Dumbbell", userId: null },
-  { id: "std_ex_bb_bicep_curl", name: "Barbell Bicep Curl", category: "Arms", equipment: "Barbell", userId: null },
-  { id: "std_ex_hammer_curl", name: "Dumbbell Hammer Curl", category: "Arms", equipment: "Dumbbell", userId: null },
-  { id: "std_ex_incline_db_curl", name: "Incline Dumbbell Curl", category: "Arms", equipment: "Dumbbell", userId: null },
-  { id: "std_ex_preacher_curl", name: "Preacher Curl", category: "Arms", equipment: "Barbell", userId: null },
-  { id: "std_ex_tricep_rope_pushdown", name: "Tricep Rope Pushdown", category: "Arms", equipment: "Cable", userId: null },
-  { id: "std_ex_skull_crusher", name: "EZ-Bar Skull Crusher", category: "Arms", equipment: "Barbell", userId: null },
-  { id: "std_ex_overhead_tricep_ext", name: "Overhead Dumbbell Tricep Extension", category: "Arms", equipment: "Dumbbell", userId: null },
-  { id: "std_ex_tricep_dips", name: "Tricep Dips", category: "Arms", equipment: "Bodyweight", userId: null },
-  { id: "std_ex_close_grip_bench", name: "Close-Grip Barbell Bench Press", category: "Arms", equipment: "Barbell", userId: null },
+  { id: "std_ex_db_bicep_curl", name: "Dumbbell Bicep Curl", category: "Arms", equipment: "Dumbbell", loadType: "weighted", userId: null },
+  { id: "std_ex_bb_bicep_curl", name: "Barbell Bicep Curl", category: "Arms", equipment: "Barbell", loadType: "weighted", userId: null },
+  { id: "std_ex_hammer_curl", name: "Dumbbell Hammer Curl", category: "Arms", equipment: "Dumbbell", loadType: "weighted", userId: null },
+  { id: "std_ex_incline_db_curl", name: "Incline Dumbbell Curl", category: "Arms", equipment: "Dumbbell", loadType: "weighted", userId: null },
+  { id: "std_ex_preacher_curl", name: "Preacher Curl", category: "Arms", equipment: "Barbell", loadType: "weighted", userId: null },
+  { id: "std_ex_tricep_rope_pushdown", name: "Tricep Rope Pushdown", category: "Arms", equipment: "Cable", loadType: "weighted", userId: null },
+  { id: "std_ex_skull_crusher", name: "EZ-Bar Skull Crusher", category: "Arms", equipment: "Barbell", loadType: "weighted", userId: null },
+  { id: "std_ex_overhead_tricep_ext", name: "Overhead Dumbbell Tricep Extension", category: "Arms", equipment: "Dumbbell", loadType: "weighted", userId: null },
+  { id: "std_ex_tricep_dips", name: "Tricep Dips", category: "Arms", equipment: "Bodyweight", loadType: "bodyweight", userId: null },
+  { id: "std_ex_close_grip_bench", name: "Close-Grip Barbell Bench Press", category: "Arms", equipment: "Barbell", loadType: "weighted", userId: null },
 
   // --- Core ---
-  { id: "std_ex_hanging_knee_raise", name: "Hanging Knee Raise", category: "Core", equipment: "Bodyweight", userId: null },
-  { id: "std_ex_hanging_leg_raise", name: "Hanging Leg Raise", category: "Core", equipment: "Bodyweight", userId: null },
-  { id: "std_ex_plank", name: "Forearm Plank Hold", category: "Core", equipment: "Bodyweight", userId: null },
-  { id: "std_ex_cable_woodchop", name: "Cable Woodchopper", category: "Core", equipment: "Cable", userId: null },
-  { id: "std_ex_cable_crunch", name: "Cable Kneeling Crunch", category: "Core", equipment: "Cable", userId: null },
-  { id: "std_ex_ab_wheel", name: "Ab Wheel Rollout", category: "Core", equipment: "Bodyweight", userId: null },
-  { id: "std_ex_russian_twist", name: "Russian Twist", category: "Core", equipment: "Bodyweight", userId: null },
+  { id: "std_ex_hanging_knee_raise", name: "Hanging Knee Raise", category: "Core", equipment: "Bodyweight", loadType: "bodyweight", userId: null },
+  { id: "std_ex_hanging_leg_raise", name: "Hanging Leg Raise", category: "Core", equipment: "Bodyweight", loadType: "bodyweight", userId: null },
+  { id: "std_ex_plank", name: "Forearm Plank Hold", category: "Core", equipment: "Bodyweight", loadType: "bodyweight", userId: null },
+  { id: "std_ex_cable_woodchop", name: "Cable Woodchopper", category: "Core", equipment: "Cable", loadType: "weighted", userId: null },
+  { id: "std_ex_cable_crunch", name: "Cable Kneeling Crunch", category: "Core", equipment: "Cable", loadType: "weighted", userId: null },
+  { id: "std_ex_ab_wheel", name: "Ab Wheel Rollout", category: "Core", equipment: "Bodyweight", loadType: "bodyweight", userId: null },
+  { id: "std_ex_russian_twist", name: "Russian Twist", category: "Core", equipment: "Bodyweight", loadType: "bodyweight", userId: null },
 ];
 
 /**
@@ -282,6 +281,7 @@ export async function createCustomExercise(
     name: string;
     category?: string;
     equipment?: string;
+    loadType?: ExerciseLoadType;
     description?: string;
     coachingCue?: string;
   }
@@ -295,12 +295,16 @@ export async function createCustomExercise(
 
   const now = new Date().toISOString();
   const cue = data.coachingCue?.trim() || data.description?.trim() || undefined;
+  const inferredLoadType: ExerciseLoadType =
+    data.loadType || (data.equipment?.toLowerCase() === "bodyweight" ? "bodyweight" : "weighted");
+
   const newExercise: Exercise = {
     id: generateUUID(),
     userId,
     name: data.name.trim(),
     category: data.category?.trim() || undefined,
     equipment: data.equipment?.trim() || undefined,
+    loadType: inferredLoadType,
     coachingCue: cue,
     createdAt: now,
     updatedAt: now,

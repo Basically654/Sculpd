@@ -35,6 +35,7 @@ export default function ExercisePickerModal({
   const [customName, setCustomName] = useState("");
   const [customCategory, setCustomCategory] = useState("Chest");
   const [customEquipment, setCustomEquipment] = useState("Barbell");
+  const [customLoadType, setCustomLoadType] = useState<"weighted" | "bodyweight">("weighted");
   const [customDescription, setCustomDescription] = useState("");
   const [isCreatingCustom, setIsCreatingCustom] = useState(false);
   const [customError, setCustomError] = useState<string | null>(null);
@@ -80,6 +81,7 @@ export default function ExercisePickerModal({
         name: customName.trim(),
         category: customCategory,
         equipment: customEquipment,
+        loadType: customLoadType,
         description: customDescription.trim() || undefined,
       });
 
@@ -210,7 +212,13 @@ export default function ExercisePickerModal({
 
                 <select
                   value={customEquipment}
-                  onChange={(e) => setCustomEquipment(e.target.value)}
+                  onChange={(e) => {
+                    const equip = e.target.value;
+                    setCustomEquipment(equip);
+                    if (equip === "Bodyweight") {
+                      setCustomLoadType("bodyweight");
+                    }
+                  }}
                   className="h-8 bg-white border border-stone-200 rounded-lg px-2 text-xs text-zinc-800"
                 >
                   <option value="Barbell">Barbell</option>
@@ -219,6 +227,17 @@ export default function ExercisePickerModal({
                   <option value="Machine">Machine</option>
                   <option value="Bodyweight">Bodyweight</option>
                   <option value="Other">Other</option>
+                </select>
+
+                <select
+                  value={customLoadType}
+                  onChange={(e) =>
+                    setCustomLoadType(e.target.value as "weighted" | "bodyweight")
+                  }
+                  className="h-8 bg-white border border-stone-200 rounded-lg px-2 text-xs text-zinc-800"
+                >
+                  <option value="weighted">Weighted</option>
+                  <option value="bodyweight">Bodyweight (BW)</option>
                 </select>
               </div>
 
@@ -311,6 +330,11 @@ export default function ExercisePickerModal({
                     {ex.userId && (
                       <span className="text-[9px] font-mono bg-stone-100 text-zinc-700 px-1 rounded border border-stone-200">
                         Custom
+                      </span>
+                    )}
+                    {(ex.loadType === "bodyweight" || ex.equipment?.toLowerCase() === "bodyweight") && (
+                      <span className="text-[9px] font-mono bg-zinc-200 text-zinc-800 px-1 rounded font-bold">
+                        BW
                       </span>
                     )}
                   </div>

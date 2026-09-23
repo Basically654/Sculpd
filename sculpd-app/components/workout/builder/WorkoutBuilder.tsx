@@ -58,6 +58,12 @@ export default function WorkoutBuilder({ routineId }: WorkoutBuilderProps) {
             name: item.exercise.name,
             category: item.exercise.category,
             equipment: item.exercise.equipment,
+            loadType:
+              item.loadType ||
+              item.exercise.loadType ||
+              (item.exercise.equipment?.toLowerCase() === "bodyweight"
+                ? "bodyweight"
+                : "weighted"),
             targetSets: item.targetSets,
             targetReps: item.targetReps,
             restSeconds: item.restSeconds,
@@ -79,11 +85,15 @@ export default function WorkoutBuilder({ routineId }: WorkoutBuilderProps) {
   }, [routineId]);
 
   const handleSelectExercise = (exercise: Exercise) => {
+    const isBW =
+      exercise.loadType === "bodyweight" ||
+      exercise.equipment?.toLowerCase() === "bodyweight";
     const newItem: ConfiguredExerciseItem = {
       exerciseId: exercise.id,
       name: exercise.name,
       category: exercise.category,
       equipment: exercise.equipment,
+      loadType: isBW ? "bodyweight" : "weighted",
       targetSets: 3,
       targetReps: "8-10",
       restSeconds: 90,
@@ -154,6 +164,7 @@ export default function WorkoutBuilder({ routineId }: WorkoutBuilderProps) {
         targetSets: item.targetSets,
         targetReps: item.targetReps,
         restSeconds: item.restSeconds,
+        loadType: item.loadType,
         notes: item.notes,
       }));
 

@@ -23,20 +23,26 @@ import {
   getUserPreviousSetsForExercise,
   getUserSetsForExercise,
 } from "@/lib/db/workout-repository";
+import {
+  getUserById,
+} from "@/lib/db/user-repository";
 import { useTimer } from "@/components/timer/TimerContext";
 import { pushPendingMutations } from "@/lib/sync/sync-client";
 import { detectPersonalRecord, PRResult } from "@/lib/pr/pr-detector";
+import { isBodyweightExercise } from "@/lib/load/load-utils";
 
 interface UseWorkoutSessionOptions {
   routineSlug: string;
   userId: string | null;
   sessionToken?: string | null;
+  userBodyweight?: number | null;
 }
 
 export function useWorkoutSession({
   routineSlug,
   userId,
   sessionToken,
+  userBodyweight,
 }: UseWorkoutSessionOptions) {
   const timer = useTimer();
 
@@ -113,6 +119,7 @@ export function useWorkoutSession({
               targetReps: snap.targetReps,
               coachingCue: snap.notes || null,
               displayOrder: snap.displayOrder,
+              loadType: snap.loadType,
               createdAt: currentSession.startedAt,
               updatedAt: currentSession.updatedAt,
               // extra metadata for timer and config
@@ -130,6 +137,7 @@ export function useWorkoutSession({
               targetReps: item.targetReps,
               coachingCue: item.notes || null,
               displayOrder: item.displayOrder,
+              loadType: item.loadType || item.exercise?.loadType,
               updatedAt: item.updatedAt,
               restSeconds: item.restSeconds,
             } as Exercise & { restSeconds?: number }));
@@ -271,8 +279,14 @@ export function useWorkoutSession({
         throw new Error("Cannot log set: workout session not active.");
       }
 
-      if (typeof weight !== "number" || isNaN(weight) || weight <= 0) {
-        throw new Error("Please enter a valid weight (must be greater than 0).");
+      const isBW = isBodyweightExercise(currentExercise);
+
+      if (typeof weight !== "number" || isNaN(weight) || (isBW ? weight < 0 : weight <= 0)) {
+        throw new Error(
+          isBW
+            ? "Please enter a valid added weight (0 or greater)."
+            : "Please enter a valid weight (must be greater than 0)."
+        );
       }
 
       if (
@@ -293,10 +307,29 @@ export function useWorkoutSession({
         (s) => s.workoutSessionId !== session.id
       );
 
+      let bodyweightSnapshot: number | null = null;
+      let addedWeightValue: number | null = null;
+
+      if (isBW) {
+        if (typeof userBodyweight === "number") {
+          bodyweightSnapshot = userBodyweight;
+        } else {
+          const user = await getUserById(userId);
+          bodyweightSnapshot = user?.bodyweight ?? null;
+        }
+        addedWeightValue = weight;
+      }
+
       const prCheck = detectPersonalRecord(
-        { weight, reps },
+        {
+          weight,
+          reps,
+          bodyweight: bodyweightSnapshot,
+          addedWeight: addedWeightValue,
+        },
         currentExercise.name,
-        priorHistoricalSets
+        priorHistoricalSets,
+        isBW
       );
 
       // 1. Immediately write to IndexedDB
@@ -306,7 +339,9 @@ export function useWorkoutSession({
         currentExercise.id,
         weight,
         reps,
-        rpe
+        rpe,
+        bodyweightSnapshot,
+        addedWeightValue
       );
 
       // 2. If PR detected, trigger accomplishment overlay and track in session
@@ -341,7 +376,7 @@ export function useWorkoutSession({
 
       return newSet;
     },
-    [userId, session, currentExercise, currentExerciseSets.length, timer, sessionToken]
+    [userId, session, currentExercise, currentExerciseSets.length, timer, sessionToken, userBodyweight, routineSlug]
   );
 
   // 6. Delete last logged set

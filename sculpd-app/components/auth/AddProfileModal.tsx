@@ -10,7 +10,8 @@ interface AddProfileModalProps {
   onCreate: (
     displayName: string,
     pin: string,
-    avatarColor: AvatarColor
+    avatarColor: AvatarColor,
+    bodyweight?: number
   ) => Promise<void>;
 }
 
@@ -29,6 +30,7 @@ export default function AddProfileModal({
   onCreate,
 }: AddProfileModalProps) {
   const [displayName, setDisplayName] = useState("");
+  const [bodyweight, setBodyweight] = useState("");
   const [pin, setPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [avatarColor, setAvatarColor] = useState<AvatarColor>("emerald");
@@ -57,11 +59,18 @@ export default function AddProfileModal({
       return;
     }
 
+    const parsedBw = bodyweight.trim() ? parseFloat(bodyweight) : undefined;
+    if (parsedBw !== undefined && (isNaN(parsedBw) || parsedBw <= 0)) {
+      setErrorMsg("Bodyweight must be a positive number.");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
-      await onCreate(trimmedName, pin, avatarColor);
+      await onCreate(trimmedName, pin, avatarColor, parsedBw);
       // Reset form
       setDisplayName("");
+      setBodyweight("");
       setPin("");
       setConfirmPin("");
       setAvatarColor("emerald");
@@ -108,6 +117,22 @@ export default function AddProfileModal({
               placeholder="e.g. Alex"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
+              className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm text-zinc-900 placeholder-stone-400 focus:outline-none focus:border-zinc-900 focus:bg-white transition-colors"
+            />
+          </div>
+
+          {/* Optional Bodyweight */}
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-stone-600 mb-1.5">
+              Bodyweight (lbs) <span className="text-[10px] text-stone-400 font-normal lowercase">(optional)</span>
+            </label>
+            <input
+              type="number"
+              step="any"
+              min="0"
+              placeholder="e.g. 195"
+              value={bodyweight}
+              onChange={(e) => setBodyweight(e.target.value)}
               className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3.5 py-2.5 text-sm text-zinc-900 placeholder-stone-400 focus:outline-none focus:border-zinc-900 focus:bg-white transition-colors"
             />
           </div>

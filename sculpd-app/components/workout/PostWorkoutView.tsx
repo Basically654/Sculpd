@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { Routine, WorkoutSession, WorkoutSet, Exercise } from "@/types/models";
 import { PRResult } from "@/lib/pr/pr-detector";
 
+import { getEffectiveLoad, formatSetLoad, isBodyweightExercise } from "@/lib/load/load-utils";
+
 interface PostWorkoutViewProps {
   routine: Routine;
   session: WorkoutSession;
@@ -34,17 +36,29 @@ export default function PostWorkoutView({
     : Date.now();
   const durationMinutes = Math.max(1, Math.round((completedTime - startedTime) / 60000));
 
-  // Compute total volume
-  const totalVolume = sets.reduce((sum, s) => sum + s.weight * s.reps, 0);
+  // Compute total volume using effective load
+  const totalVolume = sets.reduce((sum, s) => sum + getEffectiveLoad(s) * s.reps, 0);
 
   // Group sets by exercise
   const exerciseSummaries = exercises.map((ex) => {
     const exSets = sets.filter((s) => s.exerciseId === ex.id);
-    const maxWeight = exSets.length > 0 ? Math.max(...exSets.map((s) => s.weight)) : 0;
+    const isBW = isBodyweightExercise(ex);
+    let maxFormatted: string | null = null;
+    if (exSets.length > 0) {
+      if (isBW) {
+        const maxSet = [...exSets].sort((a, b) => getEffectiveLoad(b) - getEffectiveLoad(a))[0];
+        maxFormatted = formatSetLoad(maxSet, true);
+      } else {
+        const maxWeight = Math.max(...exSets.map((s) => s.weight));
+        if (maxWeight > 0) {
+          maxFormatted = `${maxWeight} lbs`;
+        }
+      }
+    }
     return {
       exercise: ex,
       setsCount: exSets.length,
-      maxWeight,
+      maxFormatted,
     };
   });
 
@@ -136,7 +150,10 @@ export default function PostWorkoutView({
                 >
                   <span className="text-zinc-900 font-bold">{pr.exerciseName}</span>
                   <span className="text-amber-800 font-bold">
-                    {pr.current?.weight} lbs × {pr.current?.reps}
+                    {pr.current?.displayText
+                      ? pr.current.displayText
+                      : `${pr.current?.weight} lbs`}{" "}
+                    × {pr.current?.reps}
                   </span>
                 </div>
               ))}
@@ -150,7 +167,7 @@ export default function PostWorkoutView({
             Completed Exercises
           </h3>
           <div className="space-y-1.5">
-            {exerciseSummaries.map(({ exercise, setsCount, maxWeight }) => (
+            {exerciseSummaries.map(({ exercise, setsCount, maxFormatted }) => (
               <div
                 key={exercise.id}
                 className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white border border-stone-200 font-mono text-xs shadow-xs"
@@ -159,9 +176,9 @@ export default function PostWorkoutView({
                   <p className="text-zinc-900 font-bold uppercase">{exercise.name}</p>
                   <p className="text-[10px] text-zinc-400">{setsCount} sets recorded</p>
                 </div>
-                {maxWeight > 0 && (
+                {maxFormatted && (
                   <span className="text-zinc-800 font-bold">
-                    Max: {maxWeight} lbs
+                    Max: {maxFormatted}
                   </span>
                 )}
               </div>

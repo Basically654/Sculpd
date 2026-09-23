@@ -58,8 +58,16 @@ export default function PROverlay({
 
         {/* New Milestone Record */}
         <div className="py-4 border-y border-zinc-800/80 space-y-1">
-          <div className="text-5xl sm:text-6xl font-mono font-bold text-white tracking-tight">
-            {prData.current.weight} <span className="text-2xl text-stone-400 font-medium">lbs</span> × {prData.current.reps}
+          <div className="text-4xl sm:text-5xl font-mono font-bold text-white tracking-tight">
+            {prData.current.displayText ? (
+              prData.current.displayText
+            ) : (
+              <>
+                {prData.current.weight}{" "}
+                <span className="text-2xl text-stone-400 font-medium">lbs</span>
+              </>
+            )}{" "}
+            × {prData.current.reps}
           </div>
           <p className="text-[11px] font-mono uppercase tracking-widest text-stone-400">
             Personal Record
@@ -73,7 +81,10 @@ export default function PROverlay({
               Previous:
             </span>
             <span className="text-stone-300 font-bold">
-              {prData.previous.weight} lbs × {prData.previous.reps}
+              {prData.previous.displayText
+                ? prData.previous.displayText
+                : `${prData.previous.weight} lbs`}{" "}
+              × {prData.previous.reps}
             </span>
           </div>
         )}

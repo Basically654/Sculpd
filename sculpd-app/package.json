@@ -13,7 +13,8 @@
     "test:phase5": "tsx test/phase5-workout-overhaul.test.ts",
     "test:pr": "tsx test/pr-detection.test.ts",
     "test:notifications": "tsx test/rest-timer-notifications.test.ts",
-    "test": "tsx test/phase2-identity-isolation.test.ts && tsx test/phase3-sync-engine.test.ts && tsx test/phase4-gym-floor-workout.test.ts && tsx test/phase5-workout-overhaul.test.ts && tsx test/pr-detection.test.ts && tsx test/rest-timer-notifications.test.ts"
+    "test:bodyweight": "tsx test/bodyweight-exercises.test.ts",
+    "test": "tsx test/phase2-identity-isolation.test.ts && tsx test/phase3-sync-engine.test.ts && tsx test/phase4-gym-floor-workout.test.ts && tsx test/phase5-workout-overhaul.test.ts && tsx test/pr-detection.test.ts && tsx test/rest-timer-notifications.test.ts && tsx test/bodyweight-exercises.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.0",

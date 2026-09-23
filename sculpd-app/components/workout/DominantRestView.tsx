@@ -5,6 +5,8 @@ import React from "react";
 import { WorkoutSet, Exercise } from "@/types/models";
 import { useTimer } from "@/components/timer/TimerContext";
 
+import { formatSetSummary, isBodyweightExercise } from "@/lib/load/load-utils";
+
 interface DominantRestViewProps {
   exercise: Exercise;
   lastLoggedSet?: WorkoutSet;
@@ -35,6 +37,8 @@ export default function DominantRestView({
       ? Math.min(100, Math.max(0, ((totalDuration - remaining) / totalDuration) * 100))
       : 0;
 
+  const isBW = isBodyweightExercise(exercise);
+
   return (
     <div className="fixed inset-0 z-40 bg-zinc-950 text-white flex flex-col justify-between items-center text-center p-6 select-none animate-in fade-in duration-200">
       {/* Top: Exercise context & completed set confirmation */}
@@ -47,7 +51,7 @@ export default function DominantRestView({
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-stone-300 font-mono text-xs font-medium">
             <span className="text-emerald-500">✓</span>
             <span>
-              {lastLoggedSet.weight} lbs × {lastLoggedSet.reps}
+              {formatSetSummary(lastLoggedSet, isBW)}
             </span>
           </div>
         )}

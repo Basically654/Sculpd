@@ -9,6 +9,7 @@ export interface ConfiguredExerciseItem {
   name: string;
   category?: string;
   equipment?: string;
+  loadType?: "weighted" | "bodyweight";
   targetSets: number;
   targetReps: string;
   restSeconds: number;
@@ -163,6 +164,33 @@ export default function ExerciseConfigRow({
             {sec}s
           </button>
         ))}
+      </div>
+
+      {/* Load Type Selector */}
+      <div className="flex items-center gap-1.5 pt-0.5">
+        <span className="text-[10px] font-mono text-zinc-400 mr-1">Load:</span>
+        <button
+          type="button"
+          onClick={() => onChange({ ...item, loadType: "weighted" })}
+          className={`px-2 py-0.5 rounded text-[10px] font-mono transition-colors ${
+            (item.loadType || "weighted") === "weighted"
+              ? "bg-zinc-900 text-white font-bold border border-zinc-900"
+              : "bg-stone-100 text-zinc-600 hover:text-zinc-900 hover:bg-stone-200 border border-stone-200"
+          }`}
+        >
+          Weighted
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange({ ...item, loadType: "bodyweight" })}
+          className={`px-2 py-0.5 rounded text-[10px] font-mono transition-colors ${
+            item.loadType === "bodyweight"
+              ? "bg-zinc-900 text-white font-bold border border-zinc-900"
+              : "bg-stone-100 text-zinc-600 hover:text-zinc-900 hover:bg-stone-200 border border-stone-200"
+          }`}
+        >
+          Bodyweight (BW)
+        </button>
       </div>
 
       {/* Optional Coaching Notes */}

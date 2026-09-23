@@ -6,6 +6,7 @@ import {
   RoutineExerciseConfig,
   RoutineWithExercises,
   SyncQueueItem,
+  ExerciseLoadType,
 } from "@/types/models";
 import { getExerciseById, seedExerciseCatalog } from "./exercise-repository";
 import { generateUUID } from "@/lib/crypto/uuid";
@@ -293,6 +294,7 @@ export async function createRoutine(
       targetSets: number;
       targetReps: string;
       restSeconds?: number;
+      loadType?: ExerciseLoadType;
       notes?: string;
     }>;
   }
@@ -323,6 +325,7 @@ export async function createRoutine(
     targetSets: Number(item.targetSets) || 3,
     targetReps: String(item.targetReps || "8-10").trim(),
     restSeconds: Number(item.restSeconds) || 90,
+    loadType: item.loadType,
     notes: item.notes?.trim() || undefined,
     createdAt: now,
     updatedAt: now,
@@ -383,6 +386,7 @@ export async function updateRoutine(
       targetSets: number;
       targetReps: string;
       restSeconds?: number;
+      loadType?: ExerciseLoadType;
       notes?: string;
     }>;
   }
@@ -455,6 +459,7 @@ export async function updateRoutine(
         targetSets: Number(item.targetSets) || 3,
         targetReps: String(item.targetReps || "8-10").trim(),
         restSeconds: Number(item.restSeconds) || 90,
+        loadType: item.loadType,
         notes: item.notes?.trim() || undefined,
         createdAt: now,
         updatedAt: now,

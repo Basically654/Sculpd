@@ -24,7 +24,7 @@ const BADGE_COLOR_MAP: Record<AvatarColor, { border: string; bg: string; text: s
 };
 
 export default function UserBar() {
-  const { activeUserId, activeUser, sessionToken, switchUser } = useUser();
+  const { activeUserId, activeUser, sessionToken, switchUser, updateBodyweight } = useUser();
   const { syncState, pendingCount, triggerSync } = useSync(activeUserId, sessionToken);
 
   const [hasPushSupport, setHasPushSupport] = useState<boolean>(false);
@@ -103,8 +103,26 @@ export default function UserBar() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
               </svg>
             </div>
-            <span className="text-[10px] font-medium text-stone-500 block">
-              Personal Session
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                const newBw = prompt(
+                  "Enter athlete bodyweight in lbs:",
+                  typeof activeUser.bodyweight === "number" ? String(activeUser.bodyweight) : ""
+                );
+                if (newBw !== null) {
+                  const val = parseFloat(newBw);
+                  if (!isNaN(val) && val > 0) {
+                    updateBodyweight(val);
+                  }
+                }
+              }}
+              title="Click to update athlete bodyweight"
+              className="text-[10px] font-medium text-stone-500 hover:text-zinc-900 block cursor-pointer transition-colors"
+            >
+              {typeof activeUser.bodyweight === "number"
+                ? `${activeUser.bodyweight} lbs BW`
+                : "Personal Session • Set BW"}
             </span>
           </div>
         </button>

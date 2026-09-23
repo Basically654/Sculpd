@@ -321,7 +321,7 @@ async function runNotificationTests() {
 
   console.log("\n--- 12. Service Worker SCHEDULE_REST_TIMER Message Contract ---");
   // Simulate Service Worker message listener handling SCHEDULE_REST_TIMER
-  let swSimActiveTimer: { id: string; targetEndMs: number; tag: string } | null = null;
+  let swSimActiveTimer: any = null;
   const simulateSwMessage = (msg: { type: string; id: string; restEndsAt: number }) => {
     if (msg.type === "SCHEDULE_REST_TIMER") {
       swSimActiveTimer = {

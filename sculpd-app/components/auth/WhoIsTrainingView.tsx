@@ -41,9 +41,10 @@ export default function WhoIsTrainingView() {
   const handleCreateProfile = async (
     name: string,
     pin: string,
-    color: AvatarColor
+    color: AvatarColor,
+    bodyweight?: number
   ) => {
-    const newUser = await createProfile(name, pin, color);
+    const newUser = await createProfile(name, pin, color, bodyweight);
     setSelectedUser(newUser);
     setIsPinModalOpen(true);
   };

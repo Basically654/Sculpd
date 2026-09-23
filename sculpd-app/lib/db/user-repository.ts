@@ -40,6 +40,7 @@ export interface CreateUserInput {
   displayName: string;
   pin: string;
   avatarColor?: AvatarColor;
+  bodyweight?: number;
 }
 
 /**
@@ -61,12 +62,18 @@ export async function createUser(input: CreateUserInput): Promise<SafeUser> {
   const now = new Date().toISOString();
   const userId = generateUUID();
 
+  const parsedBw =
+    typeof input.bodyweight === "number" && input.bodyweight > 0
+      ? input.bodyweight
+      : null;
+
   const newUser: User = {
     id: userId,
     displayName: trimmedName,
     pinHash,
     pinSalt,
     avatarColor: input.avatarColor || "emerald",
+    bodyweight: parsedBw,
     createdAt: now,
     updatedAt: now,
   };
@@ -90,6 +97,51 @@ export async function createUser(input: CreateUserInput): Promise<SafeUser> {
   });
 
   return sanitizeUser(newUser);
+}
+
+/**
+ * Updates a user's current profile bodyweight in lbs.
+ */
+export async function updateUserBodyweight(
+  userId: string,
+  bodyweight: number
+): Promise<SafeUser> {
+  if (!userId) {
+    throw new Error("userId is required to update bodyweight.");
+  }
+
+  const user = await getUserById(userId);
+  if (!user) {
+    throw new Error("User profile not found.");
+  }
+
+  const parsedBw = Math.max(0, Math.round(bodyweight * 10) / 10);
+  const now = new Date().toISOString();
+
+  const updatedUser: User = {
+    ...user,
+    bodyweight: parsedBw,
+    updatedAt: now,
+  };
+
+  await db.transaction("rw", [db.users, db.syncQueue], async () => {
+    await db.users.put(updatedUser);
+
+    const syncItem: SyncQueueItem = {
+      id: generateUUID(),
+      userId,
+      operation: "update",
+      collection: "users",
+      entityId: userId,
+      payload: updatedUser,
+      timestamp: Date.now(),
+      status: "pending",
+      attempts: 0,
+    };
+    await db.syncQueue.add(syncItem);
+  });
+
+  return sanitizeUser(updatedUser);
 }
 
 /**

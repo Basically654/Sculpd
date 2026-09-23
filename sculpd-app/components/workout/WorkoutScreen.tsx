@@ -16,6 +16,10 @@ import {
   requestNotificationPermission,
   ensurePushSubscription,
 } from "@/lib/notifications/rest-notifier";
+import {
+  isBodyweightExercise,
+  formatSetSummary,
+} from "@/lib/load/load-utils";
 
 interface WorkoutScreenProps {
   routineSlug: string;
@@ -23,7 +27,7 @@ interface WorkoutScreenProps {
 
 export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
   const router = useRouter();
-  const { activeUserId, sessionToken, isLoading: isUserLoading } = useUser();
+  const { activeUserId, activeUser, sessionToken, isLoading: isUserLoading } = useUser();
   const timer = useTimer();
 
   // Local state
@@ -61,23 +65,28 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
     routineSlug,
     userId: activeUserId,
     sessionToken,
+    userBodyweight: activeUser?.bodyweight ?? null,
   });
+
+  const isBodyweight = isBodyweightExercise(currentExercise);
 
   // Pre-fill inputs with either the last logged set today or the previous session set
   React.useEffect(() => {
     if (currentExerciseSets.length > 0) {
       const last = currentExerciseSets[currentExerciseSets.length - 1];
-      setWeight(String(last.weight));
+      const w = typeof last.addedWeight === "number" ? last.addedWeight : last.weight;
+      setWeight(String(w));
       setReps(String(last.reps));
     } else if (previousSet) {
-      setWeight(String(previousSet.weight));
+      const w = typeof previousSet.addedWeight === "number" ? previousSet.addedWeight : previousSet.weight;
+      setWeight(String(w));
       setReps(String(previousSet.reps));
     } else {
-      setWeight("");
+      setWeight(isBodyweight ? "0" : "");
       setReps("");
     }
     setValidationError(null);
-  }, [currentExercise?.id, currentExerciseSets.length, previousSet?.id]);
+  }, [currentExercise?.id, currentExerciseSets.length, previousSet?.id, isBodyweight]);
 
   // If session is already completed, transition to post-workout summary
   React.useEffect(() => {
@@ -166,8 +175,8 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
     const parsedWeight = parseFloat(weight);
     const parsedReps = parseInt(reps, 10);
 
-    if (isNaN(parsedWeight) || parsedWeight <= 0) {
-      setValidationError("Enter weight > 0");
+    if (isNaN(parsedWeight) || (isBodyweight ? parsedWeight < 0 : parsedWeight <= 0)) {
+      setValidationError(isBodyweight ? "Enter added weight ≥ 0" : "Enter weight > 0");
       return;
     }
 
@@ -263,14 +272,32 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
 
         {/* Active Exercise Heading & Target */}
         <section className="pt-6 pb-4 space-y-1">
-          <h1 className="text-3xl font-black uppercase tracking-tight text-zinc-900 leading-none">
-            {currentExercise.name}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-black uppercase tracking-tight text-zinc-900 leading-none">
+              {currentExercise.name}
+            </h1>
+            {isBodyweight && (
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-zinc-200 text-zinc-700">
+                BW
+              </span>
+            )}
+          </div>
 
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex items-center gap-2 pt-1 flex-wrap">
             <span className="text-xs font-mono text-stone-600">
               Target: {currentExercise.targetSets} sets × {currentExercise.targetReps}
             </span>
+            {isBodyweight && (
+              <>
+                <span className="text-stone-300">•</span>
+                <span className="text-xs font-mono text-stone-500">
+                  Athlete BW:{" "}
+                  {typeof activeUser?.bodyweight === "number"
+                    ? `${activeUser.bodyweight} lbs`
+                    : "Not set"}
+                </span>
+              </>
+            )}
             {currentExercise.coachingCue && (
               <>
                 <span className="text-stone-300">•</span>
@@ -292,13 +319,13 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
             <div className="space-y-1 text-sm text-stone-700 font-medium">
               {previousSessionSets.map((s, idx) => (
                 <div key={s.id || idx} className="tabular-nums">
-                  {s.weight} × {s.reps}
+                  {formatSetSummary(s, isBodyweight)}
                 </div>
               ))}
             </div>
           ) : previousSet ? (
             <div className="text-sm text-stone-700 font-medium tabular-nums">
-              {previousSet.weight} × {previousSet.reps}
+              {formatSetSummary(previousSet, isBodyweight)}
             </div>
           ) : (
             <p className="text-xs text-stone-400 italic">
@@ -328,7 +355,7 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
                 <div key={s.id || idx} className="flex items-center gap-2 tabular-nums">
                   <span className="text-emerald-700 font-bold">✓</span>
                   <span>
-                    {s.weight} × {s.reps}
+                    {formatSetSummary(s, isBodyweight)}
                   </span>
                 </div>
               ))}
@@ -349,7 +376,7 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
                 htmlFor="weight-input"
                 className="block text-[11px] font-mono uppercase tracking-wider text-stone-600 font-bold mb-1 pl-0.5"
               >
-                Load (lbs)
+                {isBodyweight ? "Added Weight (lbs)" : "Load (lbs)"}
               </label>
               <div className="relative">
                 <input
@@ -358,13 +385,13 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
                   step="any"
                   min="0"
                   inputMode="decimal"
-                  placeholder="Load (lbs)"
+                  placeholder={isBodyweight ? "0" : "Load (lbs)"}
                   value={weight}
                   onChange={(e) => setWeight(e.target.value)}
                   className="w-full h-14 bg-white border-2 border-stone-300 hover:border-stone-400 focus:border-zinc-900 focus:ring-1 focus:ring-zinc-900 rounded-xl px-3 font-mono font-bold text-2xl text-center text-zinc-900 placeholder-stone-400 transition-colors shadow-sm cursor-text"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-mono uppercase text-stone-500 pointer-events-none font-bold">
-                  lbs
+                  {isBodyweight ? "+lbs" : "lbs"}
                 </span>
               </div>
             </div>
