@@ -9,6 +9,7 @@ import {
   logUserSet,
   completeWorkoutSession,
   cancelWorkoutSession,
+  deleteWorkoutSession,
 } from "../lib/db/workout-repository";
 import {
   getCompletedWorkoutSessions,
@@ -284,6 +285,46 @@ async function runWorkoutHistoryTests() {
   // Querying Dexie tables directly verifies zero network dependencies
   const offlineCheck = await getCompletedWorkoutSummaries(userId);
   assert(offlineCheck.length === 3, "History queries operate directly against local IndexedDB");
+
+  // 12. Deleting Workout History
+  console.log("\n--- 12. Deleting Workout History ---");
+  const summariesBefore = await getCompletedWorkoutSummaries(userId);
+  assert(summariesBefore.length === 3, "Starts with 3 completed workouts in history");
+
+  const session2SetsBefore = await db.sets.where("workoutSessionId").equals(session2.id).toArray();
+  assert(session2SetsBefore.length > 0, "Session 2 has logged sets before deletion");
+
+  const unauthorizedDelete = await deleteWorkoutSession("wrong_user_id", session2.id);
+  assert(unauthorizedDelete === false, "Delete fails safely if userId does not match");
+
+  const deleteResult = await deleteWorkoutSession(userId, session2.id);
+  assert(deleteResult === true, "deleteWorkoutSession succeeds for authorized user");
+
+  const deletedSessionCheck = await db.workoutSessions.get(session2.id);
+  assert(deletedSessionCheck === undefined, "Workout session removed from IndexedDB");
+
+  const session2SetsAfter = await db.sets.where("workoutSessionId").equals(session2.id).toArray();
+  assert(session2SetsAfter.length === 0, "All sets belonging to deleted session are permanently deleted");
+
+  const otherSessionCheck = await db.workoutSessions.get(session1.id);
+  assert(Boolean(otherSessionCheck), "Other workout sessions remain completely intact");
+  const session1Sets = await db.sets.where("workoutSessionId").equals(session1.id).toArray();
+  assert(session1Sets.length > 0, "Other sessions' sets remain completely intact");
+
+  const summariesAfter = await getCompletedWorkoutSummaries(userId);
+  assert(summariesAfter.length === 2, "History summaries array now contains 2 workouts");
+  const summaryIdsAfter = summariesAfter.map((s) => s.id);
+  assert(!summaryIdsAfter.includes(session2.id), "Deleted workout session is removed from history list");
+
+  const detailAfter = await getCompletedWorkoutDetail(userId, session2.id);
+  assert(detailAfter === undefined, "getCompletedWorkoutDetail returns undefined for deleted session");
+
+  const syncQueueItems = await db.syncQueue
+    .where("userId")
+    .equals(userId)
+    .filter((item) => item.operation === "delete" && item.entityId === session2.id)
+    .toArray();
+  assert(syncQueueItems.length === 1, "Delete mutation queued in syncQueue for remote sync");
 
   console.log("\n============================================================");
   console.log("✅ ALL WORKOUT HISTORY & COMPLETED VIEW TESTS PASSED 100%!");

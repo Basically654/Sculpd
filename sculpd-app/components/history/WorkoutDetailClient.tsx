@@ -1,8 +1,9 @@
 // components/history/WorkoutDetailClient.tsx
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useUser } from "@/components/auth/UserContext";
 import WhoIsTrainingView from "@/components/auth/WhoIsTrainingView";
@@ -12,6 +13,8 @@ import {
   CompletedWorkoutDetail,
 } from "@/lib/history/history-service";
 import { formatSetLoad } from "@/lib/load/load-utils";
+import { deleteWorkoutSession } from "@/lib/db/workout-repository";
+import DeleteWorkoutModal from "./DeleteWorkoutModal";
 
 interface WorkoutDetailClientProps {
   sessionId: string;
@@ -20,7 +23,9 @@ interface WorkoutDetailClientProps {
 export default function WorkoutDetailClient({
   sessionId,
 }: WorkoutDetailClientProps) {
+  const router = useRouter();
   const { activeUserId, isLoading: isAuthLoading } = useUser();
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const workoutDetail = useLiveQuery(
     async () => {
@@ -255,6 +260,19 @@ export default function WorkoutDetailClient({
             </p>
           </section>
         )}
+
+        {/* Delete Workout Record Action */}
+        <div className="pt-2 flex justify-center">
+          <button
+            type="button"
+            onClick={() => setIsDeleteModalOpen(true)}
+            className="text-xs font-mono text-stone-400 hover:text-rose-600 transition-colors cursor-pointer py-1.5 px-3 rounded-lg hover:bg-rose-50 flex items-center gap-1.5"
+            title="Delete this completed workout from history"
+          >
+            <span>🗑️</span>
+            <span>Delete workout from history</span>
+          </button>
+        </div>
       </div>
 
       {/* Bottom Navigation */}
@@ -270,6 +288,23 @@ export default function WorkoutDetailClient({
           Sculp’d • Immutable Workout History
         </p>
       </footer>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteWorkoutModal
+        isOpen={isDeleteModalOpen}
+        workoutName={workoutDetail.routineName}
+        formattedDate={workoutDetail.formattedDate}
+        formattedDuration={workoutDetail.formattedDuration}
+        totalSets={workoutDetail.totalSets}
+        formattedVolume={workoutDetail.formattedVolume}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={async () => {
+          if (activeUserId) {
+            await deleteWorkoutSession(activeUserId, sessionId);
+            router.push("/history");
+          }
+        }}
+      />
     </main>
   );
 }

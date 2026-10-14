@@ -521,3 +521,70 @@ export async function getUserSyncQueue(
   assertUserId(userId);
   return db.syncQueue.where("userId").equals(userId).sortBy("timestamp");
 }
+
+/**
+ * Permanently deletes a workout session and all associated sets for a user.
+ * Records delete mutations in syncQueue for remote replication.
+ */
+export async function deleteWorkoutSession(
+  userId: string,
+  sessionId: string
+): Promise<boolean> {
+  assertUserId(userId);
+
+  const session = await db.workoutSessions.get(sessionId);
+  if (!session || session.userId !== userId) {
+    return false;
+  }
+
+  const sessionSets = await db.sets
+    .where("workoutSessionId")
+    .equals(sessionId)
+    .toArray();
+
+  const setIds = sessionSets.map((s) => s.id);
+
+  const sessionSyncItem: SyncQueueItem = {
+    id: generateUUID(),
+    userId,
+    operation: "delete",
+    collection: "workout_sessions",
+    entityId: sessionId,
+    payload: { id: sessionId },
+    timestamp: Date.now(),
+    status: "pending",
+    attempts: 0,
+  };
+
+  const setSyncItems: SyncQueueItem[] = setIds.map((id) => ({
+    id: generateUUID(),
+    userId,
+    operation: "delete",
+    collection: "sets",
+    entityId: id,
+    payload: { id },
+    timestamp: Date.now(),
+    status: "pending",
+    attempts: 0,
+  }));
+
+  await resilientTransaction(
+    "deleteWorkoutSession",
+    [db.workoutSessions, db.sets, db.syncQueue],
+    async () => {
+      await Promise.all([
+        db.workoutSessions.delete(sessionId),
+        db.sets.where("workoutSessionId").equals(sessionId).delete(),
+        db.syncQueue.bulkAdd([sessionSyncItem, ...setSyncItems]),
+      ]);
+    },
+    async () => {
+      await db.workoutSessions.delete(sessionId);
+      await db.sets.where("workoutSessionId").equals(sessionId).delete();
+      await db.syncQueue.bulkAdd([sessionSyncItem, ...setSyncItems]);
+    }
+  );
+
+  return true;
+}
+
