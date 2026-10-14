@@ -6,6 +6,7 @@ import {
   getUsersCollection,
   getRoutinesCollection,
   getExercisesCollection,
+  getRoutineExercisesCollection,
   getWorkoutSessionsCollection,
   getSetsCollection,
 } from "@/lib/mongodb";
@@ -38,6 +39,7 @@ export async function GET(request: Request) {
 
     const usersCol = await getUsersCollection();
     const routinesCol = await getRoutinesCollection();
+    const routineExercisesCol = await getRoutineExercisesCollection();
     const exercisesCol = await getExercisesCollection();
     const sessionsCol = await getWorkoutSessionsCollection();
     const setsCol = await getSetsCollection();
@@ -46,7 +48,10 @@ export async function GET(request: Request) {
 
     // 2. Fetch Users (Sanitized: omit pinHash and pinSalt)
     const rawUsers = await usersCol
-      .find({ updatedAt: { $gt: sinceIso } })
+      .find({
+        id: verifiedUserId,
+        updatedAt: { $gt: sinceIso },
+      })
       .toArray();
 
     const users: any[] = [];
@@ -95,25 +100,77 @@ export async function GET(request: Request) {
       }
     }
 
-    // 5. Fetch Shared Catalog (Routines & Exercises)
+    // 5. Fetch Routines (User's own routines or shared catalog)
     const rawRoutines = await routinesCol
-      .find({ updatedAt: { $gt: sinceIso } })
+      .find({
+        $or: [
+          { userId: verifiedUserId },
+          { userId: "legacy_default" },
+          { userId: { $exists: false } },
+        ],
+        updatedAt: { $gt: sinceIso },
+      })
       .toArray();
-    const routines = rawRoutines
-      .filter((r) => !r.isDeleted)
-      .map(({ _id, ...r }: any) => r);
 
-    const rawExercises = await exercisesCol
-      .find({ updatedAt: { $gt: sinceIso } })
+    const routines: any[] = [];
+    for (const r of rawRoutines) {
+      if (r.isDeleted) {
+        deletedIds.push({ collection: "routines", id: r.id });
+      } else {
+        const { _id, ...cleanRoutine } = r as any;
+        routines.push(cleanRoutine);
+      }
+    }
+
+    // 6. Fetch Routine Exercises (User's own configurations or shared catalog)
+    const rawRoutineExercises = await routineExercisesCol
+      .find({
+        $or: [
+          { userId: verifiedUserId },
+          { userId: "legacy_default" },
+          { userId: { $exists: false } },
+        ],
+        updatedAt: { $gt: sinceIso },
+      })
       .toArray();
-    const exercises = rawExercises
-      .filter((e) => !e.isDeleted)
-      .map(({ _id, ...e }: any) => e);
+
+    const routineExercises: any[] = [];
+    for (const re of rawRoutineExercises) {
+      if (re.isDeleted) {
+        deletedIds.push({ collection: "routine_exercises", id: re.id });
+      } else {
+        const { _id, ...cleanRe } = re as any;
+        routineExercises.push(cleanRe);
+      }
+    }
+
+    // 7. Fetch Shared Exercise Library
+    const rawExercises = await exercisesCol
+      .find({
+        $or: [
+          { userId: verifiedUserId },
+          { userId: null },
+          { userId: { $exists: false } },
+        ],
+        updatedAt: { $gt: sinceIso },
+      })
+      .toArray();
+
+    const exercises: any[] = [];
+    for (const e of rawExercises) {
+      if (e.isDeleted) {
+        deletedIds.push({ collection: "exercises", id: e.id });
+      } else {
+        const { _id, ...cleanExercise } = e as any;
+        exercises.push(cleanExercise);
+      }
+    }
 
     const result: SyncPullResult = {
       users,
       routines,
       exercises,
+      routineExercises,
       workoutSessions,
       sets,
       deletedIds: deletedIds.length > 0 ? deletedIds : undefined,

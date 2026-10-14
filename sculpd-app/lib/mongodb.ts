@@ -4,6 +4,7 @@ import {
   User,
   Routine,
   Exercise,
+  RoutineExerciseConfig,
   WorkoutSession,
   WorkoutSet,
   PushSubscriptionRecord,
@@ -67,6 +68,11 @@ export async function getRoutinesCollection(): Promise<Collection<Routine>> {
   return db.collection<Routine>("routines");
 }
 
+export async function getRoutineExercisesCollection(): Promise<Collection<RoutineExerciseConfig>> {
+  const db = await getDatabase();
+  return db.collection<RoutineExerciseConfig>("routine_exercises");
+}
+
 export async function getExercisesCollection(): Promise<Collection<Exercise>> {
   const db = await getDatabase();
   return db.collection<Exercise>("exercises");
@@ -107,6 +113,11 @@ export async function ensureMongoIndexes(): Promise<void> {
     const routines = await getRoutinesCollection();
     await routines.createIndex({ id: 1 }, { unique: true });
     await routines.createIndex({ slug: 1 });
+
+    const routineExercises = await getRoutineExercisesCollection();
+    await routineExercises.createIndex({ id: 1 }, { unique: true });
+    await routineExercises.createIndex({ userId: 1, routineId: 1, displayOrder: 1 });
+    await routineExercises.createIndex({ userId: 1, updatedAt: 1 });
 
     const exercises = await getExercisesCollection();
     await exercises.createIndex({ id: 1 }, { unique: true });

@@ -77,6 +77,7 @@ export interface RoutineExerciseConfig {
   restSeconds: number; // Rest duration in seconds, e.g. 90
   loadType?: ExerciseLoadType; // "weighted" | "bodyweight"
   notes?: string; // Optional coaching cue or execution notes
+  userId?: string; // Foreign key to User.id for user isolation in cloud sync
   createdAt: string; // ISO 8601
   updatedAt: string; // ISO 8601
   isDeleted?: boolean;
@@ -171,7 +172,13 @@ export interface SyncPushPayload {
 export interface SyncPushResult {
   success: boolean;
   syncedItemIds: string[];
+  staleItemIds?: string[];
   errors?: Array<{ itemId: string; error: string }>;
+  details?: Array<{
+    itemId: string;
+    status: "accepted" | "stale" | "failed";
+    reason?: string;
+  }>;
 }
 
 export interface SyncPullResult {

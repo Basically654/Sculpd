@@ -338,6 +338,7 @@ export async function createRoutine(
     restSeconds: Number(item.restSeconds) || 90,
     loadType: item.loadType,
     notes: item.notes?.trim() || undefined,
+    userId,
     createdAt: now,
     updatedAt: now,
   }));
@@ -466,6 +467,7 @@ export async function updateRoutine(
     restSeconds: Number(item.restSeconds) || 90,
     loadType: item.loadType,
     notes: item.notes?.trim() || undefined,
+    userId,
     createdAt: now,
     updatedAt: now,
   }));

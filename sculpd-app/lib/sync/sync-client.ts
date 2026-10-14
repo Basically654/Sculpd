@@ -25,7 +25,7 @@ export function getBackoffDelay(attempts: number): number {
 export async function pushPendingMutations(
   userId: string,
   sessionToken: string
-): Promise<{ success: boolean; pushedCount: number; error?: string }> {
+): Promise<{ success: boolean; pushedCount: number; staleCount?: number; error?: string }> {
   if (!userId || !sessionToken) {
     return { success: false, pushedCount: 0, error: "Missing authentication" };
   }
@@ -86,9 +86,14 @@ export async function pushPendingMutations(
 
     const result: SyncPushResult = await res.json();
 
-    if (result.syncedItemIds && result.syncedItemIds.length > 0) {
-      // Safely remove successfully synced items from outbox
-      await db.syncQueue.where("id").anyOf(result.syncedItemIds).delete();
+    const itemsToPrune = [
+      ...(result.syncedItemIds || []),
+      ...(result.staleItemIds || []),
+    ];
+
+    if (itemsToPrune.length > 0) {
+      // Safely remove successfully synced and server-resolved stale items from outbox
+      await db.syncQueue.where("id").anyOf(itemsToPrune).delete();
     }
 
     // Update failed items with incremented attempt count and error message
@@ -109,6 +114,7 @@ export async function pushPendingMutations(
     return {
       success: result.success,
       pushedCount: result.syncedItemIds?.length || 0,
+      staleCount: result.staleItemIds?.length || 0,
     };
   } catch (err: any) {
     // Network or server error: retain all items in queue for future retry
