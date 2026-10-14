@@ -6,6 +6,7 @@ import { SafeUser, AvatarColor } from "@/types/models";
 import { useUser } from "./UserContext";
 import PinPadModal from "./PinPadModal";
 import AddProfileModal from "./AddProfileModal";
+import BackupModal from "./BackupModal";
 
 const COLOR_MAP: Record<AvatarColor, { border: string; bg: string; text: string }> = {
   emerald: { border: "border-emerald-200", bg: "bg-emerald-50", text: "text-emerald-800" },
@@ -22,6 +23,7 @@ export default function WhoIsTrainingView() {
   const [selectedUser, setSelectedUser] = useState<SafeUser | null>(null);
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
 
   const handleProfileClick = (user: SafeUser) => {
     setSelectedUser(user);
@@ -92,6 +94,13 @@ export default function WhoIsTrainingView() {
             >
               + Create First Profile
             </button>
+            <button
+              type="button"
+              onClick={() => setIsBackupModalOpen(true)}
+              className="mt-3 block mx-auto text-xs text-stone-500 hover:text-zinc-900 transition-colors cursor-pointer underline"
+            >
+              Or restore from backup (.json)
+            </button>
           </div>
         ) : (
           <>
@@ -158,6 +167,13 @@ export default function WhoIsTrainingView() {
         <p className="text-[10px] font-mono tracking-widest text-stone-400 uppercase">
           Sculp’d • Local-First Architecture
         </p>
+        <button
+          type="button"
+          onClick={() => setIsBackupModalOpen(true)}
+          className="mt-1 text-[11px] font-medium text-stone-400 hover:text-stone-700 transition-colors cursor-pointer"
+        >
+          Backup & Restore
+        </button>
       </footer>
 
       {/* PIN Pad Modal */}
@@ -179,6 +195,12 @@ export default function WhoIsTrainingView() {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onCreate={handleCreateProfile}
+      />
+
+      {/* Backup & Restore Modal */}
+      <BackupModal
+        isOpen={isBackupModalOpen}
+        onClose={() => setIsBackupModalOpen(false)}
       />
     </main>
   );

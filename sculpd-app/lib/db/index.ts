@@ -24,8 +24,8 @@ export class SculpdDatabase extends Dexie {
   syncQueue!: Table<SyncQueueItem, string>;
   syncMeta!: Table<SyncMeta, string>;
 
-  constructor() {
-    super(DB_NAME);
+  constructor(databaseName: string = DB_NAME) {
+    super(databaseName);
 
     // Version 1 of sculpd_v3_db:
     // Clean schema tailored for WebKit / iOS Safari with single-field indexes

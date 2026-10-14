@@ -13,6 +13,7 @@ import {
   ensurePushSubscription,
   isStandalonePWA,
 } from "@/lib/notifications/rest-notifier";
+import BackupModal from "./BackupModal";
 
 const BADGE_COLOR_MAP: Record<AvatarColor, { border: string; bg: string; text: string }> = {
   emerald: { border: "border-emerald-200", bg: "bg-emerald-50", text: "text-emerald-800" },
@@ -31,6 +32,7 @@ export default function UserBar() {
   const [hasPushSupport, setHasPushSupport] = useState<boolean>(false);
   const [isPushActive, setIsPushActive] = useState<boolean>(false);
   const [isPushLoading, setIsPushLoading] = useState<boolean>(false);
+  const [isBackupModalOpen, setIsBackupModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     const supported = isPushSupported();
@@ -219,12 +221,26 @@ export default function UserBar() {
 
         <button
           type="button"
+          onClick={() => setIsBackupModalOpen(true)}
+          className="text-xs font-medium text-zinc-600 hover:text-zinc-900 bg-white hover:bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1 shadow-xs transition-colors cursor-pointer"
+          title="Backup & Restore local database"
+        >
+          Backup
+        </button>
+
+        <button
+          type="button"
           onClick={switchUser}
           className="text-xs font-medium text-zinc-600 hover:text-zinc-900 bg-white hover:bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1 shadow-xs transition-colors cursor-pointer"
         >
           Switch
         </button>
       </div>
+
+      <BackupModal
+        isOpen={isBackupModalOpen}
+        onClose={() => setIsBackupModalOpen(false)}
+      />
     </div>
   );
 }
