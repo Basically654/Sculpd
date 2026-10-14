@@ -64,21 +64,55 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Determine absolute callback URL for QStash webhook fallback
-    const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL ||
-      request.headers.get("origin") ||
-      `https://${request.headers.get("host") || "sculpd.app"}`;
+    // 2. Determine absolute public callback URL for QStash webhook fallback
+    // In production, QStash requires a public HTTPS URL and will fail if given localhost
+    const origin = request.headers.get("origin");
+    const forwardedHost = request.headers.get("x-forwarded-host");
+    const forwardedProto = request.headers.get("x-forwarded-proto") || "https";
+    const host = request.headers.get("host");
 
-    const callbackUrl = `${appUrl.replace(/\/$/, "")}/api/notifications/dispatch`;
+    let baseUrl = "";
+    if (origin && !origin.includes("localhost") && !origin.includes("127.0.0.1")) {
+      baseUrl = origin;
+    } else if (forwardedHost && !forwardedHost.includes("localhost")) {
+      baseUrl = `${forwardedProto}://${forwardedHost}`;
+    } else if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+      baseUrl = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+    } else if (process.env.VERCEL_URL) {
+      baseUrl = `https://${process.env.VERCEL_URL}`;
+    } else if (
+      process.env.NEXT_PUBLIC_APP_URL &&
+      !process.env.NEXT_PUBLIC_APP_URL.includes("localhost")
+    ) {
+      baseUrl = process.env.NEXT_PUBLIC_APP_URL;
+    } else if (origin) {
+      baseUrl = origin;
+    } else if (host) {
+      baseUrl = `https://${host}`;
+    } else {
+      baseUrl = "https://sculpd.app";
+    }
 
-    // 3. Schedule delivery with Server-side timer & optional QStash fallback
+    const callbackUrl = `${baseUrl.replace(/\/$/, "")}/api/notifications/dispatch`;
+
+    // 3. Schedule delivery with QStash delayed webhook in production, or local server timer
     const scheduleResult = await scheduleServerRestTimer({
       timerId,
       userId: verifiedUserId,
       targetEpochMs: scheduledFor,
       callbackUrl,
     });
+
+    if (!scheduleResult.scheduled) {
+      console.warn(`[Schedule API] Failed to schedule timer ${timerId}:`, scheduleResult.error);
+      return NextResponse.json(
+        {
+          success: false,
+          error: scheduleResult.error || "Failed to schedule background notification callback.",
+        },
+        { status: 502 }
+      );
+    }
 
     // 4. Persist rest notification record in MongoDB
     await col.updateOne(

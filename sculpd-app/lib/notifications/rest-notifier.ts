@@ -100,20 +100,48 @@ export async function getCurrentPushSubscription(): Promise<PushSubscription | n
   }
 }
 
+function isKeysMatching(
+  existingKeyBuffer: ArrayBuffer | null | undefined,
+  targetBytes: Uint8Array
+): boolean {
+  if (!existingKeyBuffer) return true; // Browser doesn't expose key, assume valid
+  const existingBytes = new Uint8Array(existingKeyBuffer);
+  if (existingBytes.length !== targetBytes.length) return false;
+  for (let i = 0; i < existingBytes.length; i++) {
+    if (existingBytes[i] !== targetBytes[i]) return false;
+  }
+  return true;
+}
+
 /**
  * Subscribes the current device to Web Push and registers it with the Sculp'd backend.
  */
 export async function subscribeUserToPush(
   sessionToken: string
 ): Promise<{ success: boolean; subscription?: PushSubscription; error?: string }> {
-  if (!isPushSupported()) {
-    return { success: false, error: "Web Push is not supported on this browser/platform." };
+  if (typeof window === "undefined") {
+    return { success: false, error: "Cannot subscribe outside browser window." };
   }
 
-  const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  if (!vapidPublicKey) {
+  if (typeof window.isSecureContext !== "undefined" && !window.isSecureContext) {
+    return {
+      success: false,
+      error: "Web Push requires a secure HTTPS connection. Please access Sculp'd via HTTPS.",
+    };
+  }
+
+  if (!isPushSupported()) {
+    return {
+      success: false,
+      error: "Web Push is not supported on this browser or display mode. On iOS, add Sculp'd to Home Screen first.",
+    };
+  }
+
+  const rawVapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  if (!rawVapidKey || rawVapidKey.trim() === "") {
     return { success: false, error: "VAPID public key not configured on client." };
   }
+  const vapidPublicKey = rawVapidKey.trim();
 
   try {
     const perm = await requestNotificationPermission();
@@ -122,15 +150,27 @@ export async function subscribeUserToPush(
     }
 
     const reg = swRegistration || (await navigator.serviceWorker.ready);
-    if (!reg) {
-      return { success: false, error: "Service Worker not ready." };
+    if (!reg || !reg.pushManager) {
+      return { success: false, error: "Service Worker PushManager not ready." };
     }
 
+    const targetKeyBytes = urlBase64ToUint8Array(vapidPublicKey);
     let subscription = await reg.pushManager.getSubscription();
+
+    // If subscription already exists, verify its applicationServerKey matches current VAPID key
+    if (subscription) {
+      const existingKey = subscription.options?.applicationServerKey;
+      if (existingKey && !isKeysMatching(existingKey, targetKeyBytes)) {
+        console.log("[Push] Existing subscription key mismatch; refreshing subscription with active VAPID key");
+        await subscription.unsubscribe().catch(() => {});
+        subscription = null;
+      }
+    }
+
     if (!subscription) {
       subscription = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as any,
+        applicationServerKey: targetKeyBytes as any,
       });
     }
 
@@ -151,12 +191,12 @@ export async function subscribeUserToPush(
 
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error || "Failed to register subscription on server");
+      throw new Error(errData.error || `Failed to register subscription on server (HTTP ${res.status})`);
     }
 
     return { success: true, subscription };
   } catch (err: any) {
-    console.warn("Push subscription failed:", err);
+    console.warn("[Push] Push subscription failed:", err?.message || err);
     return { success: false, error: err?.message || "Push subscription error." };
   }
 }
@@ -191,7 +231,7 @@ export async function unsubscribeUserFromPush(
   }
 }
 
-let pushSubscriptionEnsured = false;
+let lastEnsuredToken: string | null = null;
 
 /**
  * Ensures the current browser is registered with Web Push if permission has already
@@ -208,13 +248,13 @@ export async function ensurePushSubscription(
     return { success: false, error: "Notification permission not granted." };
   }
 
-  if (pushSubscriptionEnsured) {
+  if (lastEnsuredToken === sessionToken) {
     return { success: true };
   }
 
   const res = await subscribeUserToPush(sessionToken);
   if (res.success) {
-    pushSubscriptionEnsured = true;
+    lastEnsuredToken = sessionToken;
   }
   return res;
 }
@@ -332,30 +372,44 @@ export async function scheduleRestNotification(
 
   // 4. Asynchronously schedule Web Push via server scheduler
   // Completely safe: if offline, sessionToken is missing, or network fails, workout is unaffected
-  if (sessionToken && navigator.onLine) {
-    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-      ensurePushSubscription(sessionToken).catch(() => {});
-    }
+  if (sessionToken && typeof navigator !== "undefined" && navigator.onLine) {
+    (async () => {
+      try {
+        if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+          await ensurePushSubscription(sessionToken).catch((subErr) => {
+            console.warn("[RestNotifier] Pre-schedule subscription check note:", subErr);
+          });
+        }
 
-    fetch("/api/notifications/schedule", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${sessionToken}`,
-      },
-      body: JSON.stringify({
-        timerId: fullPayload.id,
-        scheduledFor: fullPayload.restEndsAt,
-        totalDuration: fullPayload.totalDuration,
-        exerciseName: fullPayload.exerciseName,
-        nextSetNumber: fullPayload.nextSetNumber,
-        workoutUrl: fullPayload.workoutUrl,
-        workoutSessionId: fullPayload.workoutSessionId,
-      }),
-    }).catch((netErr) => {
-      // Offline or network error: log non-blocking warning
-      console.warn("Background push schedule notice (offline/skipped):", netErr);
-    });
+        const res = await fetch("/api/notifications/schedule", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${sessionToken}`,
+          },
+          body: JSON.stringify({
+            timerId: fullPayload.id,
+            scheduledFor: fullPayload.restEndsAt,
+            totalDuration: fullPayload.totalDuration,
+            exerciseName: fullPayload.exerciseName,
+            nextSetNumber: fullPayload.nextSetNumber,
+            workoutUrl: fullPayload.workoutUrl,
+            workoutSessionId: fullPayload.workoutSessionId,
+          }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          console.warn("[RestNotifier] Server schedule returned non-OK:", res.status, errData);
+        } else {
+          const data = await res.json().catch(() => ({}));
+          console.log("[RestNotifier] Rest notification scheduled successfully:", data);
+        }
+      } catch (netErr) {
+        // Offline or network error: log non-blocking warning
+        console.warn("[RestNotifier] Background push schedule notice (offline/skipped):", netErr);
+      }
+    })();
   }
 }
 

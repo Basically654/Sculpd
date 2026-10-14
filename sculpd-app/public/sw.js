@@ -76,7 +76,22 @@ self.addEventListener("push", (event) => {
     },
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  const showPromise = self.registration
+    .showNotification(title, options)
+    .catch((err) => {
+      // iOS WebKit can reject if vibrate or requireInteraction is unsupported
+      return self.registration.showNotification(title, {
+        body,
+        icon: "/icon-192.png",
+        tag,
+        data: {
+          url: targetUrl,
+          timestamp: Date.now(),
+        },
+      });
+    });
+
+  event.waitUntil(showPromise);
 });
 
 /**
@@ -166,19 +181,31 @@ self.addEventListener("message", (event) => {
         // If app is suspended, tab hidden, or phone locked: display notification
         if (!hasVisibleFocusedClient) {
           const { title, body } = buildNotificationText(exerciseName, nextSetNumber);
-          await self.registration.showNotification(title, {
-            body,
-            icon: "/icon-192.png",
-            badge: "/icon-192.png",
-            tag: timerTag,
-            renotify: true,
-            requireInteraction: true,
-            vibrate: [300, 100, 300, 100, 300],
-            data: {
-              url: workoutUrl || "/",
-              timestamp: Date.now(),
-            },
-          });
+          try {
+            await self.registration.showNotification(title, {
+              body,
+              icon: "/icon-192.png",
+              badge: "/icon-192.png",
+              tag: timerTag,
+              renotify: true,
+              requireInteraction: true,
+              vibrate: [300, 100, 300, 100, 300],
+              data: {
+                url: workoutUrl || "/",
+                timestamp: Date.now(),
+              },
+            });
+          } catch {
+            await self.registration.showNotification(title, {
+              body,
+              icon: "/icon-192.png",
+              tag: timerTag,
+              data: {
+                url: workoutUrl || "/",
+                timestamp: Date.now(),
+              },
+            });
+          }
         }
       } catch (err) {
         console.warn("SW local rest notification error:", err);

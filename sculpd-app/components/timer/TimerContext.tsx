@@ -85,14 +85,18 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
   // Initialize service worker on client startup & ensure push subscription if permission granted
   useEffect(() => {
     initServiceWorker().catch(() => {});
+  }, []);
+
+  // Ensure push subscription in DB when sessionToken becomes available if permission is already granted
+  useEffect(() => {
     if (
-      sessionTokenRef.current &&
+      sessionToken &&
       typeof Notification !== "undefined" &&
       Notification.permission === "granted"
     ) {
-      ensurePushSubscription(sessionTokenRef.current).catch(() => {});
+      ensurePushSubscription(sessionToken).catch(() => {});
     }
-  }, []);
+  }, [sessionToken]);
 
   const stop = useCallback(() => {
     if (intervalRef.current) {
@@ -190,15 +194,13 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
         localStorage.setItem(STORAGE_TOTAL_KEY, String(seconds));
       }
 
-      // Ensure push subscription if permission already granted
+      // Ensure push subscription is persisted if permission was already granted
       if (
         sessionTokenRef.current &&
         typeof Notification !== "undefined" &&
         Notification.permission === "granted"
       ) {
         ensurePushSubscription(sessionTokenRef.current).catch(() => {});
-      } else {
-        requestNotificationPermission().catch(() => {});
       }
 
       // Dispatch background notification to Service Worker and server scheduler

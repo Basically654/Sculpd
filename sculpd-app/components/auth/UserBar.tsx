@@ -10,6 +10,7 @@ import {
   getCurrentPushSubscription,
   subscribeUserToPush,
   unsubscribeUserFromPush,
+  ensurePushSubscription,
   isStandalonePWA,
 } from "@/lib/notifications/rest-notifier";
 
@@ -34,33 +35,67 @@ export default function UserBar() {
   useEffect(() => {
     const supported = isPushSupported();
     setHasPushSupport(supported);
-    if (supported) {
-      getCurrentPushSubscription().then((sub) => {
-        setIsPushActive(Boolean(sub));
-      });
+    if (!supported) {
+      setIsPushActive(false);
+      return;
     }
-  }, [activeUserId]);
+
+    if (typeof Notification !== "undefined" && Notification.permission !== "granted") {
+      setIsPushActive(false);
+      return;
+    }
+
+    getCurrentPushSubscription()
+      .then(async (sub) => {
+        if (!sub) {
+          setIsPushActive(false);
+          return;
+        }
+        if (sessionToken) {
+          const res = await ensurePushSubscription(sessionToken);
+          setIsPushActive(res.success);
+        } else {
+          setIsPushActive(true);
+        }
+      })
+      .catch(() => {
+        setIsPushActive(false);
+      });
+  }, [activeUserId, sessionToken]);
 
   const handleTogglePush = async () => {
     if (!sessionToken || isPushLoading) return;
     setIsPushLoading(true);
 
     try {
+      const isIOS =
+        typeof navigator !== "undefined" &&
+        (/iphone|ipad|ipod/i.test(navigator.userAgent) ||
+          (/macintosh/i.test(navigator.userAgent) && (navigator.maxTouchPoints || 0) > 1));
+
       if (isPushActive) {
         await unsubscribeUserFromPush(sessionToken);
         setIsPushActive(false);
       } else {
+        if (isIOS && !isStandalonePWA()) {
+          alert(
+            "On iOS, background rest alerts require adding Sculp'd to your Home Screen.\n\n1. Tap the Share button (square with arrow) at the bottom of Safari.\n2. Tap 'Add to Home Screen'.\n3. Launch Sculp'd from your Home Screen to turn on Alerts."
+          );
+          return;
+        }
+
+        if (typeof Notification !== "undefined" && Notification.permission === "denied") {
+          alert(
+            "Notification permission is blocked. Go to iPhone Settings → Notifications → Sculp'd and enable 'Allow Notifications'."
+          );
+          return;
+        }
+
         const res = await subscribeUserToPush(sessionToken);
         if (res.success) {
           setIsPushActive(true);
         } else if (res.error) {
-          if (!isStandalonePWA() && /iphone|ipad|ipod/i.test(navigator.userAgent)) {
-            alert(
-              "On iOS, Web Push requires adding Sculp'd to your Home Screen first (Share → Add to Home Screen)."
-            );
-          } else {
-            alert(res.error);
-          }
+          alert(res.error);
         }
       }
     } finally {

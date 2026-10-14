@@ -37,24 +37,45 @@ export function formatPushPayload(data: RestPushPayload): string {
 
 let vapidConfigured = false;
 
-function ensureVapidConfig(): boolean {
+export function ensureVapidConfig(): boolean {
   if (vapidConfigured) return true;
 
-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
-  const subject = process.env.VAPID_SUBJECT || "mailto:support@sculpd.app";
+  const rawPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const rawPrivateKey = process.env.VAPID_PRIVATE_KEY;
+  const rawSubject = process.env.VAPID_SUBJECT || "mailto:support@sculpd.app";
 
-  if (!publicKey || !privateKey) {
+  if (!rawPublicKey || !rawPrivateKey) {
     return false;
+  }
+
+  const publicKey = rawPublicKey.trim();
+  const privateKey = rawPrivateKey.trim();
+  let subject = rawSubject.trim();
+
+  // RFC 8292: subject must be a mailto: or https: URL
+  if (!subject.startsWith("mailto:") && !subject.startsWith("https://")) {
+    subject = `mailto:${subject}`;
   }
 
   try {
     webpush.setVapidDetails(subject, publicKey, privateKey);
     vapidConfigured = true;
     return true;
-  } catch (err) {
-    console.warn("VAPID initialization error:", err);
+  } catch (err: any) {
+    console.warn("VAPID initialization error:", err?.message || err);
     return false;
+  }
+}
+
+/**
+ * Safely extracts host from endpoint URL for safe diagnostic logging without revealing token.
+ */
+function getEndpointHost(endpoint: string): string {
+  try {
+    const url = new URL(endpoint);
+    return url.hostname;
+  } catch {
+    return "unknown-push-service";
   }
 }
 
@@ -83,6 +104,7 @@ export async function sendPushToSubscription(
   };
 
   const payloadString = formatPushPayload(payload);
+  const targetHost = getEndpointHost(subscription.endpoint);
 
   try {
     const result = await webpush.sendNotification(
@@ -94,16 +116,24 @@ export async function sendPushToSubscription(
       }
     );
 
+    console.log(
+      `[WebPush] SUCCESS: Delivered push to ${targetHost} for timer ${payload.timerId} (status ${result.statusCode})`
+    );
     return { success: true, statusCode: result.statusCode };
   } catch (err: any) {
     const statusCode = err?.statusCode || err?.status;
+    const errorDetail = err?.body || err?.message || "Web Push delivery failed";
+
+    console.warn(
+      `[WebPush] FAILED: Push delivery to ${targetHost} failed with status ${statusCode || "unknown"}: ${errorDetail}`
+    );
 
     // HTTP 410 (Gone) or 404 (Not Found): subscription was unsubscribed or revoked
     if (statusCode === 410 || statusCode === 404) {
       try {
         const col = await getPushSubscriptionsCollection();
         await col.deleteOne({ id: subscription.id });
-        console.log(`Pruned inactive push subscription ${subscription.id} (${statusCode})`);
+        console.log(`[WebPush] Pruned inactive push subscription (${statusCode}) from DB`);
       } catch (pruneErr) {
         console.warn("Failed to prune stale push subscription:", pruneErr);
       }
@@ -112,7 +142,7 @@ export async function sendPushToSubscription(
     return {
       success: false,
       statusCode,
-      error: err?.message || "Web Push delivery failed",
+      error: typeof errorDetail === "string" ? errorDetail : JSON.stringify(errorDetail),
     };
   }
 }

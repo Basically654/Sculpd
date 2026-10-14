@@ -212,7 +212,9 @@ export type RestNotificationStatus =
   | "scheduled"
   | "dispatched"
   | "cancelled"
-  | "superseded";
+  | "superseded"
+  | "failed"
+  | "failed_no_subscription";
 
 /**
  * Scheduled rest notification record stored in MongoDB.

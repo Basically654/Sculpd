@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const rawBody = await request.text();
 
     // 1. Verify QStash signature if signing keys are configured
-    const currentSigningKey = process.env.QSTASH_CURRENT_SIGNING_KEY;
+    const currentSigningKey = process.env.QSTASH_CURRENT_SIGNING_KEY?.trim();
     if (currentSigningKey) {
       const signature = request.headers.get("upstash-signature");
       if (!signature) {
@@ -24,10 +24,10 @@ export async function POST(request: Request) {
         );
       }
 
+      const nextSigningKey = (process.env.QSTASH_NEXT_SIGNING_KEY || currentSigningKey).trim();
       const receiver = new Receiver({
         currentSigningKey,
-        nextSigningKey:
-          process.env.QSTASH_NEXT_SIGNING_KEY || currentSigningKey,
+        nextSigningKey,
       });
 
       try {

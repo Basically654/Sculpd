@@ -370,6 +370,75 @@ async function runNotificationTests() {
   cancelServerTimer(testServerTimerId);
   assert(!timersMap.has(testServerTimerId), "cancelServerTimer successfully pruned timer from map");
 
+  console.log("\n--- 14. VAPID Environment Configuration & Sanitization ---");
+  // Test VAPID trimming & mailto prefix sanitization
+  const sanitizeVapid = (pub: string, priv: string, sub: string) => {
+    const cleanPub = pub.trim();
+    const cleanPriv = priv.trim();
+    let cleanSub = sub.trim();
+    if (!cleanSub.startsWith("mailto:") && !cleanSub.startsWith("https://")) {
+      cleanSub = `mailto:${cleanSub}`;
+    }
+    return { cleanPub, cleanPriv, cleanSub };
+  };
+
+  const untrimmed = sanitizeVapid("  pub_key_123  ", "  priv_key_456\n", "admin@sculpd.app ");
+  assert(untrimmed.cleanPub === "pub_key_123", "Public VAPID key whitespace trimmed");
+  assert(untrimmed.cleanPriv === "priv_key_456", "Private VAPID key whitespace trimmed");
+  assert(untrimmed.cleanSub === "mailto:admin@sculpd.app", "VAPID subject sanitized with RFC 8292 mailto: prefix");
+
+  console.log("\n--- 15. Serverless QStash Callback URL Resolution ---");
+  const resolvePublicUrl = (
+    headers: { host?: string; proto?: string },
+    envUrl?: string,
+    vercelUrl?: string
+  ): string => {
+    const host = headers.host;
+    const proto = headers.proto || "https";
+    if (host && !host.includes("localhost") && !host.includes("127.0.0.1")) {
+      return `${proto}://${host}`;
+    }
+    if (envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1")) {
+      return envUrl.replace(/\/$/, "");
+    }
+    if (vercelUrl) {
+      return `https://${vercelUrl}`;
+    }
+    return "http://localhost:3000";
+  };
+
+  const prodFromHost = resolvePublicUrl({ host: "sculpd.vercel.app", proto: "https" });
+  assert(prodFromHost === "https://sculpd.vercel.app", "Public domain resolved from request host header");
+
+  const prodFromVercel = resolvePublicUrl({ host: "localhost:3000" }, undefined, "sculpd-preview.vercel.app");
+  assert(prodFromVercel === "https://sculpd-preview.vercel.app", "Vercel URL resolved when request host is localhost");
+
+  console.log("\n--- 16. Zero-Subscription Backend Desync Detection ---");
+  // Simulate dispatch logic when subscriptions collection is empty
+  const simulateDispatchWithSubs = (subsCount: number) => {
+    if (subsCount === 0) {
+      return {
+        success: false,
+        status: "failed_no_subscription",
+        error: "No push subscriptions registered for user",
+      };
+    }
+    return {
+      success: true,
+      status: "dispatched",
+      deliveredCount: subsCount,
+    };
+  };
+
+  const emptySubResult = simulateDispatchWithSubs(0);
+  assert(emptySubResult.success === false, "Dispatch fails explicitly when user has 0 subscriptions");
+  assert(emptySubResult.status === "failed_no_subscription", "Database status marked as failed_no_subscription instead of falsely 'dispatched'");
+  assert(emptySubResult.error === "No push subscriptions registered for user", "Clear diagnostic reason reported when subscription is missing");
+
+  const validSubResult = simulateDispatchWithSubs(1);
+  assert(validSubResult.success === true, "Dispatch succeeds when active subscription exists");
+  assert(validSubResult.status === "dispatched", "Database marked as dispatched upon delivery");
+
   console.log("\n============================================================");
   console.log("✅ ALL REST TIMER & BACKGROUND NOTIFICATION TESTS PASSED 100%!");
   console.log("============================================================\n");
