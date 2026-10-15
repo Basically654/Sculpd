@@ -40,6 +40,14 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isCompletedSession, setIsCompletedSession] = useState<boolean>(false);
   const [hasStartedWorkout, setHasStartedWorkout] = useState<boolean>(false);
+  const [isRestMinimized, setIsRestMinimized] = useState<boolean>(false);
+
+  // If timer stops or finishes, restore default state
+  React.useEffect(() => {
+    if (!timer.isActive) {
+      setIsRestMinimized(false);
+    }
+  }, [timer.isActive]);
 
   const {
     routine,
@@ -120,16 +128,33 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
     );
   }
 
+  // Workout Preview before starting (or when routine is loaded without active sets)
+  const hasLoggedSets = sessionSets && sessionSets.length > 0;
+  if (routine && !hasStartedWorkout && !hasLoggedSets) {
+    return (
+      <WorkoutPreview
+        routineId={routine.id}
+        onStart={() => setHasStartedWorkout(true)}
+      />
+    );
+  }
+
   // Error handling
   if (error || !routine || !currentExercise || !session) {
     return (
       <main className="min-h-screen bg-[#fafaf8] text-zinc-900 p-6 max-w-md mx-auto flex flex-col items-center justify-center text-center space-y-4 font-mono">
         <p className="text-rose-600 text-xs">{error || "Could not load workout."}</p>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Link
+            href={`/workout/edit/${routine?.id || routineSlug}`}
+            className="px-4 py-2 rounded-xl bg-zinc-900 text-white text-xs uppercase shadow-xs active:scale-95 transition-transform"
+          >
+            Edit Routine
+          </Link>
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="px-4 py-2 rounded-xl bg-zinc-900 text-white text-xs uppercase shadow-xs active:scale-95 transition-transform"
+            className="px-4 py-2 rounded-xl bg-white border border-stone-300 text-xs uppercase text-zinc-800 shadow-xs active:scale-95 transition-transform"
           >
             Retry
           </button>
@@ -142,17 +167,6 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
           </button>
         </div>
       </main>
-    );
-  }
-
-  // Workout Preview before starting
-  const hasLoggedSets = sessionSets && sessionSets.length > 0;
-  if (!hasStartedWorkout && !hasLoggedSets) {
-    return (
-      <WorkoutPreview
-        routineId={routine.id}
-        onStart={() => setHasStartedWorkout(true)}
-      />
     );
   }
 
@@ -237,15 +251,6 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
       setIsCompletedSession(true);
     }
   };
-
-  const [isRestMinimized, setIsRestMinimized] = React.useState(false);
-
-  // If timer stops or finishes, restore default state
-  React.useEffect(() => {
-    if (!timer.isActive) {
-      setIsRestMinimized(false);
-    }
-  }, [timer.isActive]);
 
   const isFinalSet =
     targetSetsCount !== null && currentExerciseSets.length >= targetSetsCount;

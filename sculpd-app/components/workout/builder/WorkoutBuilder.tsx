@@ -24,6 +24,7 @@ export default function WorkoutBuilder({ routineId }: WorkoutBuilderProps) {
   const router = useRouter();
   const { activeUserId, sessionToken } = useUser();
 
+  const [resolvedRoutineId, setResolvedRoutineId] = useState<string | undefined>(routineId);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [exercises, setExercises] = useState<ConfiguredExerciseItem[]>([]);
@@ -43,25 +44,29 @@ export default function WorkoutBuilder({ routineId }: WorkoutBuilderProps) {
       setIsLoading(true);
       setError(null);
       try {
-        const data = await getRoutineWithExercises(idToLoad);
+        let data = await getRoutineWithExercises(idToLoad);
+        if (!data) {
+          data = await getRoutineWithExercises(decodeURIComponent(idToLoad));
+        }
         if (!data) {
           if (isMounted) setError("Workout routine not found.");
           return;
         }
 
         if (isMounted) {
-          setName(data.name);
+          setResolvedRoutineId(data.id);
+          setName(data.name || "");
           setDescription(data.description || "");
-          const mapped: ConfiguredExerciseItem[] = data.exercises.map((item) => ({
+          const mapped: ConfiguredExerciseItem[] = (data.exercises || []).map((item) => ({
             id: item.id,
             exerciseId: item.exerciseId,
-            name: item.exercise.name,
-            category: item.exercise.category,
-            equipment: item.exercise.equipment,
+            name: item.exercise?.name || "Exercise",
+            category: item.exercise?.category,
+            equipment: item.exercise?.equipment,
             loadType:
               item.loadType ||
-              item.exercise.loadType ||
-              (item.exercise.equipment?.toLowerCase() === "bodyweight"
+              item.exercise?.loadType ||
+              (item.exercise?.equipment?.toLowerCase() === "bodyweight"
                 ? "bodyweight"
                 : "weighted"),
             targetSets: item.targetSets,
@@ -168,14 +173,16 @@ export default function WorkoutBuilder({ routineId }: WorkoutBuilderProps) {
         notes: item.notes,
       }));
 
-      let savedId = routineId;
+      const targetRoutineId = resolvedRoutineId || routineId;
+      let savedId = targetRoutineId;
 
-      if (routineId) {
-        await updateRoutine(activeUserId, routineId, {
+      if (targetRoutineId) {
+        const updated = await updateRoutine(activeUserId, targetRoutineId, {
           name: trimmedName,
           description: description.trim() || undefined,
           exercises: exercisePayload,
         });
+        savedId = updated.id;
       } else {
         const created = await createRoutine(activeUserId, {
           name: trimmedName,
@@ -200,12 +207,13 @@ export default function WorkoutBuilder({ routineId }: WorkoutBuilderProps) {
   };
 
   const handleDelete = async () => {
-    if (!activeUserId || !routineId) return;
+    const targetRoutineId = resolvedRoutineId || routineId;
+    if (!activeUserId || !targetRoutineId) return;
     if (!window.confirm("Are you sure you want to delete this workout routine?")) return;
 
     try {
       setIsDeleting(true);
-      await deleteRoutine(activeUserId, routineId);
+      await deleteRoutine(activeUserId, targetRoutineId);
 
       if (sessionToken) {
         pushPendingMutations(activeUserId, sessionToken).catch((err) => {

@@ -403,23 +403,35 @@ export default function DevConsoleClient() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-stone-300 uppercase tracking-wider mb-1.5">
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-stone-300 uppercase tracking-wider">
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUsername("dev");
+                    setPassword("devpass0000");
+                  }}
+                  className="text-[10px] font-mono text-amber-400 hover:text-amber-300 hover:underline cursor-pointer"
+                >
+                  ⚡ Autofill default credentials
+                </button>
+              </div>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="w-full bg-stone-950 border border-stone-700 rounded-xl px-3.5 py-2.5 text-sm text-stone-100 focus:outline-none focus:border-amber-500 transition-colors"
-                placeholder="••••••••••••"
+                placeholder="devpass0000"
               />
             </div>
 
             <button
               type="submit"
               disabled={isLoggingIn}
-              className="w-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold py-2.5 px-4 rounded-xl text-sm transition-colors shadow-lg shadow-amber-500/20 disabled:opacity-50"
+              className="w-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold py-2.5 px-4 rounded-xl text-sm transition-colors shadow-lg shadow-amber-500/20 disabled:opacity-50 cursor-pointer"
             >
               {isLoggingIn ? "Authenticating..." : "Enter Developer Mode"}
             </button>

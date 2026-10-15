@@ -178,6 +178,14 @@ export function DevProvider({ children }: { children: React.ReactNode }) {
           if (res.ok) {
             const data = await res.json();
             serverInfo = data.system;
+          } else if (res.status === 401 || res.status === 403) {
+            // Clear invalid or expired developer token
+            setDevToken(null);
+            setDevUser(null);
+            if (typeof window !== "undefined") {
+              localStorage.removeItem(DEV_TOKEN_KEY);
+              localStorage.removeItem(DEV_USER_KEY);
+            }
           }
         } catch {
           // offline
@@ -291,4 +299,8 @@ export function useDev(): DevContextValue {
     throw new Error("useDev must be used within a DevProvider");
   }
   return context;
+}
+
+export function useDevSafe(): DevContextValue | null {
+  return useContext(DevContext);
 }

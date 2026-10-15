@@ -4,7 +4,7 @@
 import React from "react";
 import { WorkoutSet, Exercise } from "@/types/models";
 import { useTimer } from "@/components/timer/TimerContext";
-import { useDev } from "@/components/dev/DevContext";
+import { useDevSafe } from "@/components/dev/DevContext";
 
 import { formatSetSummary, isBodyweightExercise } from "@/lib/load/load-utils";
 import NextExercisePreview from "./NextExercisePreview";
@@ -37,15 +37,8 @@ export default function DominantRestView({
   onToggleMinimize,
 }: DominantRestViewProps) {
   const { remaining, totalDuration, addTime, accelerateTimer, completeTimerNow } = useTimer();
-
-  let isDevModeActive = false;
-  try {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const devCtx = useDev();
-    isDevModeActive = devCtx.isDevModeActive;
-  } catch {
-    isDevModeActive = false;
-  }
+  const devCtx = useDevSafe();
+  const isDevModeActive = devCtx?.isDevModeActive ?? false;
 
   const mins = Math.floor(remaining / 60);
   const secs = remaining % 60;

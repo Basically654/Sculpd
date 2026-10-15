@@ -222,7 +222,7 @@ export default function UserBar() {
           </button>
         )}
 
-        {isDevModeActive && (
+        {isDevModeActive ? (
           <div className="flex items-center gap-1">
             <Link
               href="/dev"
@@ -241,6 +241,15 @@ export default function UserBar() {
               Exit
             </button>
           </div>
+        ) : (
+          <Link
+            href="/dev"
+            className="text-[11px] font-mono font-medium text-stone-500 hover:text-amber-800 hover:bg-amber-50 border border-stone-200 hover:border-amber-200 rounded-lg px-2 py-1 shadow-xs transition-colors cursor-pointer flex items-center gap-1"
+            title="Open Developer Mode"
+          >
+            <span>🛠️</span>
+            <span>Dev</span>
+          </Link>
         )}
 
         <button

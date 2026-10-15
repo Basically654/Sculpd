@@ -10,7 +10,7 @@ export function isDevModeEnabled(): boolean {
   if (process.env.NODE_ENV !== "production") {
     return true;
   }
-  return process.env.ENABLE_DEV_MODE === "true";
+  return process.env.ENABLE_DEV_MODE === "true" || process.env.ENABLE_DEV_MODE === "1";
 }
 
 const DEV_USERNAME = process.env.DEV_USERNAME || "dev";
@@ -28,11 +28,11 @@ export function validateDevCredentials(username: string, pass: string): boolean 
     return false;
   }
 
-  // Timing-safe comparison for developer credentials
-  const expectedUser = DEV_USERNAME;
-  const expectedPass = DEV_PASSWORD;
+  // Safe comparison for developer credentials
+  const expectedUser = (process.env.DEV_USERNAME || DEV_USERNAME).trim().toLowerCase();
+  const expectedPass = (process.env.DEV_PASSWORD || DEV_PASSWORD).trim();
 
-  const userMatch = username.trim() === expectedUser;
+  const userMatch = username.trim().toLowerCase() === expectedUser;
   const passMatch = pass.trim() === expectedPass;
 
   return userMatch && passMatch;

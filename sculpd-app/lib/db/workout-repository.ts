@@ -98,20 +98,24 @@ export async function startWorkoutSession(
 ): Promise<WorkoutSession> {
   assertUserId(userId);
 
+  // Create immutable snapshot of routine details and exercises at start time
+  let routineName = "Workout";
+  let exerciseSnapshots: WorkoutSessionExerciseSnapshot[] = [];
+
+  const routineWithExercises = await getRoutineWithExercises(routineId);
+  const canonicalRoutineId = routineWithExercises
+    ? routineWithExercises.id
+    : ((await getRoutineById(routineId)) || (await getRoutineBySlug(routineId)))?.id || routineId;
+
   const existingActive = await getActiveWorkoutSession(userId);
   if (existingActive) {
-    if (existingActive.routineId === routineId) {
+    if (existingActive.routineId === canonicalRoutineId || existingActive.routineId === routineId) {
       return existingActive;
     }
     // If an existing session for a different routine was left open, mark it completed
     await completeWorkoutSession(userId, existingActive.id);
   }
 
-  // Create immutable snapshot of routine details and exercises at start time
-  let routineName = "Workout";
-  let exerciseSnapshots: WorkoutSessionExerciseSnapshot[] = [];
-
-  const routineWithExercises = await getRoutineWithExercises(routineId);
   if (routineWithExercises) {
     routineName = routineWithExercises.name;
     exerciseSnapshots = routineWithExercises.exercises.map((item) => ({
@@ -157,7 +161,7 @@ export async function startWorkoutSession(
   const session: WorkoutSession = {
     id: generateUUID(),
     userId,
-    routineId,
+    routineId: canonicalRoutineId,
     routineName,
     exerciseSnapshots,
     startedAt: now,
@@ -750,6 +754,10 @@ export async function backfillHistoricalWorkoutSession(
   let exerciseSnapshots: WorkoutSessionExerciseSnapshot[] = [];
 
   const routineWithExercises = await getRoutineWithExercises(input.routineId);
+  const canonicalRoutineId = routineWithExercises
+    ? routineWithExercises.id
+    : ((await getRoutineById(input.routineId)) || (await getRoutineBySlug(input.routineId)))?.id || input.routineId;
+
   if (routineWithExercises) {
     routineName = routineWithExercises.name;
     exerciseSnapshots = routineWithExercises.exercises.map((item) => ({
@@ -794,7 +802,7 @@ export async function backfillHistoricalWorkoutSession(
   const session: WorkoutSession = {
     id: generateUUID(),
     userId,
-    routineId: input.routineId,
+    routineId: canonicalRoutineId,
     routineName,
     exerciseSnapshots,
     startedAt: startedAtDate.toISOString(),

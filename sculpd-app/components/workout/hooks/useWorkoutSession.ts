@@ -90,7 +90,10 @@ export function useWorkoutSession({
 
         // Fetch routine by ID or slug from IndexedDB
         const loadedRoutine =
-          (await getRoutineById(routineSlug)) || (await getRoutineBySlug(routineSlug));
+          (await getRoutineById(routineSlug)) ||
+          (await getRoutineBySlug(routineSlug)) ||
+          (await getRoutineById(decodeURIComponent(routineSlug))) ||
+          (await getRoutineBySlug(decodeURIComponent(routineSlug)));
         if (!loadedRoutine) {
           if (isMounted) {
             setError(`Routine "${routineSlug}" not found in database.`);
@@ -151,7 +154,9 @@ export function useWorkoutSession({
 
         if (loadedExercises.length === 0) {
           if (isMounted) {
-            setError(`No exercises found for workout "${loadedRoutine.name}".`);
+            setRoutine(loadedRoutine);
+            setExercises([]);
+            setSession(currentSession);
             setIsLoading(false);
           }
           return;

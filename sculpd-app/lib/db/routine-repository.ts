@@ -182,11 +182,103 @@ export async function getAllRoutines(userId?: string): Promise<Routine[]> {
 }
 
 /**
+ * Safely infers or heals a routine name for legacy routines that only have dayName, focusTarget, or slug.
+ */
+export function inferRoutineName(r: any): string {
+  if (typeof r?.name === "string" && r.name.trim().length > 0) {
+    return r.name.trim();
+  }
+  const day = typeof r?.dayName === "string" ? r.dayName.trim() : "";
+  const focus = typeof r?.focusTarget === "string" ? r.focusTarget.trim() : "";
+  if (day && focus) {
+    return `${day} - ${focus}`;
+  }
+  if (day) return day;
+  if (focus) return focus;
+
+  if (typeof r?.slug === "string" && r.slug.trim().length > 0) {
+    const s = r.slug.trim();
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  if (typeof r?.id === "string" && r.id.trim().length > 0) {
+    const cleaned = r.id
+      .replace(/^rtn_/, "")
+      .replace(/[_-]+/g, " ")
+      .trim();
+    if (cleaned.length > 0) {
+      return cleaned
+        .split(" ")
+        .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+    }
+  }
+
+  return "Workout";
+}
+
+/**
+ * Safely infers or heals an exercise name for legacy exercises lacking a name.
+ */
+export function inferExerciseName(ex: any): string {
+  if (typeof ex?.name === "string" && ex.name.trim().length > 0) {
+    return ex.name.trim();
+  }
+  if (typeof ex?.id === "string" && ex.id.trim().length > 0) {
+    const cleaned = ex.id
+      .replace(/^(std_ex_|ex_)/, "")
+      .replace(/[_-]+/g, " ")
+      .trim();
+    if (cleaned.length > 0) {
+      return cleaned
+        .split(" ")
+        .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+    }
+  }
+  return "Exercise";
+}
+
+/**
+ * Retrieves a single routine by its UUID/id or slug.
+ * Pure read-only operation safe for liveQuery contexts.
+ */
+export async function getRoutineByIdOrSlug(idOrSlug: string): Promise<Routine | undefined> {
+  if (!idOrSlug) return undefined;
+  const direct = await db.routines.get(idOrSlug);
+  if (direct) {
+    return {
+      ...direct,
+      name: inferRoutineName(direct),
+    };
+  }
+
+  const normalized = idOrSlug.toLowerCase().trim();
+  const bySlug = await db.routines.where("slug").equals(normalized).first();
+  if (bySlug) {
+    return {
+      ...bySlug,
+      name: inferRoutineName(bySlug),
+    };
+  }
+
+  const byId = await db.routines.where("id").equals(idOrSlug.trim()).first();
+  if (byId) {
+    return {
+      ...byId,
+      name: inferRoutineName(byId),
+    };
+  }
+
+  return undefined;
+}
+
+/**
  * Retrieves a single routine by its UUID/id.
  * Pure read-only operation safe for liveQuery contexts.
  */
 export async function getRoutineById(id: string): Promise<Routine | undefined> {
-  return db.routines.get(id);
+  return getRoutineByIdOrSlug(id);
 }
 
 /**
@@ -194,26 +286,28 @@ export async function getRoutineById(id: string): Promise<Routine | undefined> {
  * Pure read-only operation safe for liveQuery contexts.
  */
 export async function getRoutineBySlug(slug: string): Promise<Routine | undefined> {
-  const normalized = slug.toLowerCase().trim();
-  const found = await db.routines.where("slug").equals(normalized).first();
-  if (found) return found;
-  return db.routines.get(slug);
+  return getRoutineByIdOrSlug(slug);
 }
 
 /**
  * Retrieves a routine along with its ordered exercise configurations and library exercise data.
  * Pure read-only operation safe for liveQuery contexts.
+ * Seamlessly resolves either UUID/id or legacy slug (e.g. 'monday', 'friday').
  */
 export async function getRoutineWithExercises(
   routineId: string
 ): Promise<RoutineWithExercises | undefined> {
-  const routine = await db.routines.get(routineId);
+  if (!routineId) return undefined;
+
+  const routine = await getRoutineByIdOrSlug(routineId);
   if (!routine) return undefined;
+
+  const canonicalRoutineId = routine.id;
 
   // 1. Fetch ordered configurations from routineExercises table
   const configs = await db.routineExercises
     .where("routineId")
-    .equals(routineId)
+    .equals(canonicalRoutineId)
     .sortBy("displayOrder");
 
   if (configs.length > 0) {
@@ -224,9 +318,14 @@ export async function getRoutineWithExercises(
           // Fallback placeholder if exercise was somehow unlinked
           exercise = {
             id: cfg.exerciseId,
-            name: "Unknown Exercise",
+            name: inferExerciseName({ id: cfg.exerciseId }),
             createdAt: cfg.createdAt,
             updatedAt: cfg.updatedAt,
+          };
+        } else if (!exercise.name) {
+          exercise = {
+            ...exercise,
+            name: inferExerciseName(exercise),
           };
         }
         return {
@@ -245,12 +344,12 @@ export async function getRoutineWithExercises(
   // 2. Legacy fallback for Phase 4 routines
   const legacyExercises = await db.exercises
     .where("routineId")
-    .equals(routineId)
+    .equals(canonicalRoutineId)
     .sortBy("displayOrder");
 
   const exercises = legacyExercises.map((ex, idx) => ({
     id: ex.id,
-    routineId,
+    routineId: canonicalRoutineId,
     exerciseId: ex.id,
     displayOrder: ex.displayOrder ?? idx + 1,
     targetSets: ex.targetSets ?? 3,
@@ -259,7 +358,10 @@ export async function getRoutineWithExercises(
     notes: ex.coachingCue || undefined,
     createdAt: ex.createdAt || new Date().toISOString(),
     updatedAt: ex.updatedAt || new Date().toISOString(),
-    exercise: ex,
+    exercise: {
+      ...ex,
+      name: inferExerciseName(ex),
+    },
   }));
 
   return {
@@ -279,7 +381,7 @@ export async function getExercisesForRoutine(routineId: string): Promise<Exercis
     return withExercises.exercises.map((item) => ({
       ...item.exercise,
       id: item.exerciseId,
-      routineId,
+      routineId: withExercises.id,
       targetSets: item.targetSets,
       targetReps: item.targetReps,
       coachingCue: item.notes ?? null,
@@ -414,15 +516,20 @@ export async function updateRoutine(
 ): Promise<Routine> {
   assertUserId(userId);
 
-  const existing = await db.routines.get(routineId);
-  if (!existing || existing.userId !== userId) {
+  const existing = await getRoutineByIdOrSlug(routineId);
+  if (!existing) {
+    throw new Error("Routine not found or unauthorized.");
+  }
+  if (existing.userId !== userId && existing.userId !== "legacy_default") {
     throw new Error("Routine not found or unauthorized.");
   }
 
+  const canonicalRoutineId = existing.id;
   const now = new Date().toISOString();
   const updatedRoutine: Routine = {
     ...existing,
-    name: input.name !== undefined ? input.name.trim() : existing.name,
+    userId, // claim ownership if previously legacy_default
+    name: input.name !== undefined ? input.name.trim() : (existing.name || inferRoutineName(existing)),
     description:
       input.description !== undefined ? input.description?.trim() || undefined : existing.description,
     updatedAt: now,
@@ -430,7 +537,7 @@ export async function updateRoutine(
 
   const existingConfigs =
     input.exercises !== undefined
-      ? await db.routineExercises.where("routineId").equals(routineId).toArray()
+      ? await db.routineExercises.where("routineId").equals(canonicalRoutineId).toArray()
       : [];
 
   const routineSyncItem: SyncQueueItem = {
@@ -459,7 +566,7 @@ export async function updateRoutine(
 
   const newConfigs: RoutineExerciseConfig[] = (input.exercises || []).map((item, index) => ({
     id: item.id || generateUUID(),
-    routineId,
+    routineId: canonicalRoutineId,
     exerciseId: item.exerciseId,
     displayOrder: index + 1,
     targetSets: Number(item.targetSets) || 3,
@@ -500,7 +607,7 @@ export async function updateRoutine(
       ];
       if (input.exercises !== undefined) {
         if (existingConfigs.length > 0) {
-          ops.push(db.routineExercises.where("routineId").equals(routineId).delete());
+          ops.push(db.routineExercises.where("routineId").equals(canonicalRoutineId).delete());
         }
         if (newConfigs.length > 0) {
           ops.push(db.routineExercises.bulkAdd(newConfigs));
@@ -512,7 +619,7 @@ export async function updateRoutine(
       await db.routines.put(updatedRoutine);
       if (input.exercises !== undefined) {
         if (existingConfigs.length > 0) {
-          await db.routineExercises.where("routineId").equals(routineId).delete();
+          await db.routineExercises.where("routineId").equals(canonicalRoutineId).delete();
         }
         if (newConfigs.length > 0) {
           await db.routineExercises.bulkAdd(newConfigs);
@@ -531,20 +638,21 @@ export async function updateRoutine(
 export async function deleteRoutine(userId: string, routineId: string): Promise<boolean> {
   assertUserId(userId);
 
-  const existing = await db.routines.get(routineId);
-  if (!existing || existing.userId !== userId) {
+  const existing = await getRoutineByIdOrSlug(routineId);
+  if (!existing || (existing.userId !== userId && existing.userId !== "legacy_default")) {
     return false;
   }
 
-  const configs = await db.routineExercises.where("routineId").equals(routineId).toArray();
+  const canonicalRoutineId = existing.id;
+  const configs = await db.routineExercises.where("routineId").equals(canonicalRoutineId).toArray();
 
   const routineDel: SyncQueueItem = {
     id: generateUUID(),
     userId,
     operation: "delete",
     collection: "routines",
-    entityId: routineId,
-    payload: { id: routineId },
+    entityId: canonicalRoutineId,
+    payload: { id: canonicalRoutineId },
     timestamp: Date.now(),
     status: "pending",
     attempts: 0,
@@ -569,14 +677,14 @@ export async function deleteRoutine(userId: string, routineId: string): Promise<
     [db.routines, db.routineExercises, db.syncQueue],
     async () => {
       await Promise.all([
-        db.routines.delete(routineId),
-        db.routineExercises.where("routineId").equals(routineId).delete(),
+        db.routines.delete(canonicalRoutineId),
+        db.routineExercises.where("routineId").equals(canonicalRoutineId).delete(),
         db.syncQueue.bulkAdd(allDels),
       ]);
     },
     async () => {
-      await db.routines.delete(routineId);
-      await db.routineExercises.where("routineId").equals(routineId).delete();
+      await db.routines.delete(canonicalRoutineId);
+      await db.routineExercises.where("routineId").equals(canonicalRoutineId).delete();
       await db.syncQueue.bulkAdd(allDels);
     }
   );
@@ -595,11 +703,12 @@ export async function reorderRoutineExercises(
 ): Promise<void> {
   assertUserId(userId);
 
-  const routine = await db.routines.get(routineId);
-  if (!routine || routine.userId !== userId) {
+  const routine = await getRoutineByIdOrSlug(routineId);
+  if (!routine || (routine.userId !== userId && routine.userId !== "legacy_default")) {
     throw new Error("Unauthorized to reorder exercises for this routine.");
   }
 
+  const canonicalRoutineId = routine.id;
   const now = new Date().toISOString();
   const configsToUpdate: RoutineExerciseConfig[] = [];
   const syncItemsToQueue: SyncQueueItem[] = [];
@@ -608,7 +717,7 @@ export async function reorderRoutineExercises(
     const configId = orderedConfigIds[i];
     const newOrder = i + 1;
     const cfg = await db.routineExercises.get(configId);
-    if (cfg && cfg.routineId === routineId) {
+    if (cfg && cfg.routineId === canonicalRoutineId) {
       const updatedCfg = { ...cfg, displayOrder: newOrder, updatedAt: now };
       configsToUpdate.push(updatedCfg);
       syncItemsToQueue.push({

@@ -27,12 +27,13 @@ export function isBodyweightExercise(
  *
  * Guaranteed backward-compatible with legacy historical sets.
  */
-export function getEffectiveLoad(set: {
-  weight: number;
+export function getEffectiveLoad(set?: {
+  weight?: number;
   reps?: number;
   bodyweight?: number | null;
   addedWeight?: number | null;
-}): number {
+} | null): number {
+  if (!set) return 0;
   if (typeof set.bodyweight === "number" && set.bodyweight > 0) {
     const added =
       typeof set.addedWeight === "number"
@@ -52,14 +53,15 @@ export function getEffectiveLoad(set: {
  * - Standard weighted: "185 lbs"
  */
 export function formatSetLoad(
-  set: {
-    weight: number;
+  set?: {
+    weight?: number;
     reps?: number;
     bodyweight?: number | null;
     addedWeight?: number | null;
-  },
+  } | null,
   isBodyweight?: boolean
 ): string {
+  if (!set) return "";
   const isBW =
     isBodyweight || (typeof set.bodyweight === "number" && set.bodyweight > 0);
 
@@ -77,23 +79,25 @@ export function formatSetLoad(
     return "BW";
   }
 
-  return `${set.weight} lbs`;
+  return `${typeof set.weight === "number" ? set.weight : 0} lbs`;
 }
 
 /**
  * Formats a completed set summary, e.g. "BW + 15 lbs × 8" or "185 lbs × 5".
  */
 export function formatSetSummary(
-  set: {
-    weight: number;
-    reps: number;
+  set?: {
+    weight?: number;
+    reps?: number;
     bodyweight?: number | null;
     addedWeight?: number | null;
-  },
+  } | null,
   isBodyweight?: boolean
 ): string {
+  if (!set) return "";
   const loadStr = formatSetLoad(set, isBodyweight);
-  return `${loadStr} × ${set.reps}`;
+  const repsStr = typeof set.reps === "number" ? set.reps : 0;
+  return `${loadStr} × ${repsStr}`;
 }
 
 /**
