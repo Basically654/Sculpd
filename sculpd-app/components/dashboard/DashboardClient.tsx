@@ -106,48 +106,46 @@ export default function DashboardClient() {
   }
 
   return (
-    <main className="min-h-screen bg-[#fafaf8] text-zinc-900 p-4 font-sans flex flex-col justify-between pb-12 max-w-md mx-auto w-full">
+    <main className="min-h-screen bg-[#fafaf8] text-zinc-900 p-4 font-sans flex flex-col justify-between pb-12 max-w-md mx-auto w-full overflow-x-hidden">
       {/* Upper Section */}
       <div>
         <UserBar />
 
-        {/* Header with Title, History Link, and + Create Workout Button */}
-        <header className="pt-2 pb-5 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-black tracking-tight text-zinc-900 uppercase">
-              MY WORKOUTS
-            </h1>
-            <p className="text-xs text-stone-500 font-medium tracking-wide mt-0.5">
-              Personal Training Library
-            </p>
+        {/* Header with Title, New Button, and Mobile Navigation Pills */}
+        <header className="pt-2 pb-4">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <h1 className="text-2xl font-black tracking-tight text-zinc-900 uppercase">
+                MY WORKOUTS
+              </h1>
+              <p className="text-xs text-stone-500 font-medium tracking-wide mt-0.5">
+                Personal Training Library
+              </p>
+            </div>
+
+            <Link
+              href="/workout/new"
+              className="h-9 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-xs tracking-wider flex items-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer shrink-0"
+            >
+              <span>+</span>
+              <span>New</span>
+            </Link>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          {/* Clean responsive navigation pill bar */}
+          <nav aria-label="Feature navigation" className="flex items-center gap-1.5 mt-3 pt-2.5 border-t border-stone-200/60">
             <Link
-              href="/analytics"
-              className="h-9 px-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 border border-stone-200/80 text-zinc-800 font-mono text-xs uppercase tracking-wider flex items-center gap-1 shadow-2xs transition-all active:scale-95 cursor-pointer"
-              title="View Training Analytics"
+              href="/progression"
+              className="flex-1 h-8 px-2 rounded-xl bg-stone-100 hover:bg-stone-200 border border-stone-200/80 text-zinc-800 font-mono text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer"
+              title="View Ranks, Badges & Accountability"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-                className="w-3.5 h-3.5 text-stone-500"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"
-                />
-              </svg>
-              <span>Stats</span>
+              <span>🏅</span>
+              <span>Ranks</span>
             </Link>
 
             <Link
               href="/history"
-              className="h-9 px-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 border border-stone-200/80 text-zinc-800 font-mono text-xs uppercase tracking-wider flex items-center gap-1 shadow-2xs transition-all active:scale-95 cursor-pointer"
+              className="flex-1 h-8 px-2 rounded-xl bg-stone-100 hover:bg-stone-200 border border-stone-200/80 text-zinc-800 font-mono text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer"
               title="View Workout History"
             >
               <svg
@@ -168,13 +166,27 @@ export default function DashboardClient() {
             </Link>
 
             <Link
-              href="/workout/new"
-              className="h-9 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-xs tracking-wider flex items-center gap-1 shadow-2xs transition-all active:scale-95 cursor-pointer"
+              href="/analytics"
+              className="flex-1 h-8 px-2 rounded-xl bg-stone-100 hover:bg-stone-200 border border-stone-200/80 text-zinc-800 font-mono text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer"
+              title="View Training Analytics"
             >
-              <span>+</span>
-              <span>New</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+                className="w-3.5 h-3.5 text-stone-500"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"
+                />
+              </svg>
+              <span>Stats</span>
             </Link>
-          </div>
+          </nav>
         </header>
 
         {/* Resume Unfinished Workout Banner */}

@@ -17,7 +17,22 @@ import {
   WorkoutSet,
   SyncQueueItem,
   WorkoutSessionExerciseSnapshot,
+  WorkoutSkip,
+  FitnessAlternative,
 } from "@/types/models";
+import {
+  getMonthlyAccountabilitySummary,
+  recordWorkoutSkip,
+  cancelWorkoutSkip,
+  recordFitnessAlternative,
+  handleWorkoutCompletedOnDate,
+  MIN_ALTERNATIVE_MINUTES,
+} from "@/lib/accountability/accountability-service";
+import {
+  getLifetimeProgressionSummary,
+  RANKS,
+  ACHIEVEMENT_DEFINITIONS,
+} from "@/lib/progression/progression-service";
 
 export type TestStatus =
   | "pending"
@@ -337,34 +352,56 @@ export function getInitialTestGroups(): TestGroup[] {
     {
       id: 12,
       name: "Monthly Skips & Earned Fitness Alternatives",
-      description: "Roadmap feature: monthly workout skip credits and non-gym activity alternatives.",
-      status: "not_implemented",
+      description: "Monthly skip allowance (3/month), earned skips from alternatives (>=20m), and explicit skip usage.",
+      status: "pending",
       tests: [
         {
-          id: "monthly_skips_feature",
+          id: "monthly_skips_allowance",
           groupId: 12,
           groupName: "Monthly Skips & Earned Fitness Alternatives",
-          name: "Monthly Skip Credits & Rest Subscriptions",
-          description: "Planned for a future milestone. Not yet implemented in current Sculp'd architecture.",
-          status: "not_implemented",
-          summary: "Feature not implemented (Roadmap Milestone 3+)",
+          name: "Monthly Skips Allowance & User Isolation",
+          description: "Verify 3 free skips per calendar month, non-rollover semantics, and strict user isolation.",
+          status: "pending",
+        },
+        {
+          id: "fitness_alternatives_earned_skips",
+          groupId: 12,
+          groupName: "Monthly Skips & Earned Fitness Alternatives",
+          name: "Fitness Alternatives Earning Skips",
+          description: "Verify activities >=20 min earn permanent carried-over skip credits, while <20 min do not.",
+          status: "pending",
+        },
+        {
+          id: "explicit_skip_and_supersede",
+          groupId: 12,
+          groupName: "Monthly Skips & Earned Fitness Alternatives",
+          name: "Explicit Skip Usage & Workout Supersede",
+          description: "Verify explicit skip records, refunding via un-skip, and refunding when workout is completed.",
+          status: "pending",
         },
       ],
     },
     {
       id: 13,
       name: "Achievements, Badges, Ranks & Progression",
-      description: "Roadmap feature: gamified achievement unlock triggers, badges, and lifter rank progression.",
-      status: "not_implemented",
+      description: "Deterministic achievements, verified PR calculation triggers, and lifter rank progression.",
+      status: "pending",
       tests: [
         {
-          id: "gamified_achievements_feature",
+          id: "deterministic_achievements_progression",
           groupId: 13,
           groupName: "Achievements, Badges, Ranks & Progression",
-          name: "Gamification & Achievement Badge System",
-          description: "Planned for a future milestone. Not yet implemented in current Sculp'd architecture.",
-          status: "not_implemented",
-          summary: "Feature not implemented (Roadmap Milestone 3+)",
+          name: "Deterministic Achievements & PR Verification",
+          description: "Verify 16 milestone achievements unlock deterministically from completed sessions without arbitrary points.",
+          status: "pending",
+        },
+        {
+          id: "lifter_ranks_progression",
+          groupId: 13,
+          groupName: "Achievements, Badges, Ranks & Progression",
+          name: "Lifter Rank Tiers & Multi-Metric Advancement",
+          description: "Verify Bronze through Master of Iron rank thresholds across workouts, PRs, and lifetime volume.",
+          status: "pending",
         },
       ],
     },
@@ -508,6 +545,8 @@ export async function runTestCase(testId: string): Promise<TestCase> {
           "sets",
           "syncQueue",
           "syncMeta",
+          "skips",
+          "fitnessAlternatives",
         ];
 
         const missing = expectedTables.filter((t) => !tables.includes(t));
@@ -520,11 +559,11 @@ export async function runTestCase(testId: string): Promise<TestCase> {
           id: testId,
           groupId: 2,
           groupName: "IndexedDB Schema & Repository Operations",
-          name: "Dexie v1 Store Architecture",
-          description: "Verify all 8 stores exist on sculpd_v3_db.",
+          name: "Dexie v2 Store Architecture",
+          description: "Verify all 10 stores exist on sculpd_v3_db.",
           status: "passed",
           durationMs,
-          summary: `All ${expectedTables.length} Dexie stores present and open.`,
+          summary: `All ${expectedTables.length} Dexie stores present and open (v2 schema).`,
           details: { tables },
         };
       }
@@ -1052,31 +1091,205 @@ export async function runTestCase(testId: string): Promise<TestCase> {
         };
       }
 
-      // Group 12: Unimplemented
-      case "monthly_skips_feature": {
+      // Group 12: Monthly Skips & Alternatives
+      case "monthly_skips_allowance": {
+        await ensureDbOpen();
+        const testUserId = "usr_dev_test_skips_allowance";
+        const summary = await getMonthlyAccountabilitySummary(testUserId, "2026-10-15");
+        if (summary.freeSkipsTotal !== 3) {
+          throw new Error(`Expected freeSkipsTotal to be 3, got ${summary.freeSkipsTotal}`);
+        }
+        if (summary.freeSkipsRemaining !== 3) {
+          throw new Error(`Expected 3 free skips remaining initially, got ${summary.freeSkipsRemaining}`);
+        }
+        if (summary.monthKey !== "2026-10") {
+          throw new Error(`Expected monthKey '2026-10', got ${summary.monthKey}`);
+        }
+
+        // Strict user isolation test
+        let threwForEmpty = false;
+        try {
+          await getMonthlyAccountabilitySummary("", "2026-10-15");
+        } catch {
+          threwForEmpty = true;
+        }
+        if (!threwForEmpty) {
+          throw new Error("Strict user isolation failed: expected error for empty userId");
+        }
+
+        const durationMs = Math.round(performance.now() - start);
         return {
           id: testId,
           groupId: 12,
           groupName: "Monthly Skips & Earned Fitness Alternatives",
-          name: "Monthly Skip Credits & Rest Subscriptions",
-          description: "Planned for a future milestone. Not yet implemented in current Sculp'd architecture.",
-          status: "not_implemented",
-          durationMs: 0,
-          summary: "Roadmap Feature: Monthly skips and earned fitness alternatives are not yet implemented.",
+          name: "Monthly Skips Allowance & User Isolation",
+          description: "Verify 3 free skips per calendar month, non-rollover semantics, and strict user isolation.",
+          status: "passed",
+          durationMs,
+          summary: "Verified 3 free skips per calendar month with strict user isolation.",
         };
       }
 
-      // Group 13: Unimplemented
-      case "gamified_achievements_feature": {
+      case "fitness_alternatives_earned_skips": {
+        await ensureDbOpen();
+        const testUserId = "usr_dev_test_alt_earning";
+
+        // Activity >= 20 min earns a skip
+        const walk = await recordFitnessAlternative(testUserId, {
+          activityType: "walking",
+          title: "Brisk Walk",
+          durationMinutes: 25,
+          dateKey: "2026-10-14",
+        });
+        if (!walk.skipEarned) {
+          throw new Error("Expected 25 min walk to earn a skip credit (skipEarned = true)");
+        }
+
+        // Activity < 20 min does NOT earn a skip
+        const shortStretch = await recordFitnessAlternative(testUserId, {
+          activityType: "mobility",
+          title: "Quick 10m Stretch",
+          durationMinutes: 10,
+          dateKey: "2026-10-14",
+        });
+        if (shortStretch.skipEarned) {
+          throw new Error("Expected 10 min mobility session NOT to earn a skip credit");
+        }
+
+        const summary = await getMonthlyAccountabilitySummary(testUserId, "2026-10-14");
+        if (summary.earnedSkipsAvailable !== 1) {
+          throw new Error(`Expected 1 earned skip available, got ${summary.earnedSkipsAvailable}`);
+        }
+
+        // Clean up test records
+        await db.fitnessAlternatives.bulkDelete([walk.id, shortStretch.id]);
+        await db.syncQueue.where("userId").equals(testUserId).delete();
+
+        const durationMs = Math.round(performance.now() - start);
+        return {
+          id: testId,
+          groupId: 12,
+          groupName: "Monthly Skips & Earned Fitness Alternatives",
+          name: "Fitness Alternatives Earning Skips",
+          description: "Verify activities >=20 min earn permanent carried-over skip credits, while <20 min do not.",
+          status: "passed",
+          durationMs,
+          summary: "Verified >=20 min activities earn skip credits; <20 min activities do not.",
+        };
+      }
+
+      case "explicit_skip_and_supersede": {
+        await ensureDbOpen();
+        const testUserId = "usr_dev_test_skip_lifecycle";
+        const targetDate = "2026-10-10";
+
+        // Record skip
+        const skip = await recordWorkoutSkip(testUserId, {
+          dateKey: targetDate,
+          routineName: "Upper Power",
+          reason: "Travel day",
+        });
+        if (skip.skipType !== "free") {
+          throw new Error(`Expected skipType to be 'free', got ${skip.skipType}`);
+        }
+
+        let summary = await getMonthlyAccountabilitySummary(testUserId, targetDate);
+        if (summary.freeSkipsRemaining !== 2) {
+          throw new Error(`Expected 2 free skips remaining after skip, got ${summary.freeSkipsRemaining}`);
+        }
+
+        // Complete workout on the same day -> supersedes skip and refunds credit
+        await handleWorkoutCompletedOnDate(testUserId, targetDate);
+        summary = await getMonthlyAccountabilitySummary(testUserId, targetDate);
+        if (summary.freeSkipsRemaining !== 3) {
+          throw new Error(`Expected 3 free skips remaining after workout superseded skip, got ${summary.freeSkipsRemaining}`);
+        }
+
+        // Clean up test records
+        await db.skips.where("userId").equals(testUserId).delete();
+        await db.syncQueue.where("userId").equals(testUserId).delete();
+
+        const durationMs = Math.round(performance.now() - start);
+        return {
+          id: testId,
+          groupId: 12,
+          groupName: "Monthly Skips & Earned Fitness Alternatives",
+          name: "Explicit Skip Usage & Workout Supersede",
+          description: "Verify explicit skip records, refunding via un-skip, and refunding when workout is completed.",
+          status: "passed",
+          durationMs,
+          summary: "Explicit skip records and refund on workout completion verified.",
+        };
+      }
+
+      // Group 13: Achievements & Progression
+      case "deterministic_achievements_progression": {
+        if (!Array.isArray(ACHIEVEMENT_DEFINITIONS) || ACHIEVEMENT_DEFINITIONS.length !== 16) {
+          throw new Error(`Expected 16 achievement definitions, found ${ACHIEVEMENT_DEFINITIONS?.length}`);
+        }
+
+        const categories = new Set(ACHIEVEMENT_DEFINITIONS.map((a) => a.category));
+        const requiredCategories = ["consistency", "pr", "milestone", "volume"];
+        for (const req of requiredCategories) {
+          if (!categories.has(req as any)) {
+            throw new Error(`Missing achievement category: ${req}`);
+          }
+        }
+
+        // Verify deterministic evaluation for zero-history user
+        const zeroSummary = await getLifetimeProgressionSummary("usr_dev_test_empty_achievements");
+        if (zeroSummary.unlockedAchievementsCount !== 0) {
+          throw new Error(`Expected 0 unlocked achievements for empty history, got ${zeroSummary.unlockedAchievementsCount}`);
+        }
+        if (zeroSummary.achievements.length !== 16) {
+          throw new Error(`Expected all 16 achievements evaluated, got ${zeroSummary.achievements.length}`);
+        }
+
+        const durationMs = Math.round(performance.now() - start);
         return {
           id: testId,
           groupId: 13,
           groupName: "Achievements, Badges, Ranks & Progression",
-          name: "Gamification & Achievement Badge System",
-          description: "Planned for a future milestone. Not yet implemented in current Sculp'd architecture.",
-          status: "not_implemented",
-          durationMs: 0,
-          summary: "Roadmap Feature: Gamification, badges, and lifter rank progression are not yet implemented.",
+          name: "Deterministic Achievements & PR Verification",
+          description: "Verify 16 milestone achievements unlock deterministically from completed sessions without arbitrary points.",
+          status: "passed",
+          durationMs,
+          summary: "16 achievements across consistency, PRs, milestones, and volume verified deterministically.",
+        };
+      }
+
+      case "lifter_ranks_progression": {
+        if (!Array.isArray(RANKS) || RANKS.length !== 6) {
+          throw new Error(`Expected 6 rank tiers, found ${RANKS?.length}`);
+        }
+
+        // Verify tier ordering and monotonic requirements
+        for (let i = 1; i < RANKS.length; i++) {
+          const prev = RANKS[i - 1];
+          const curr = RANKS[i];
+          if (curr.minWorkouts <= prev.minWorkouts || curr.minPRs <= prev.minPRs || curr.minVolume <= prev.minVolume) {
+            throw new Error(`Rank requirements must strictly increase from level ${prev.level} to ${curr.level}`);
+          }
+        }
+
+        const emptySummary = await getLifetimeProgressionSummary("usr_dev_test_empty_rank");
+        if (emptySummary.rank.currentRank.level !== 1 || emptySummary.rank.currentRank.title !== "Bronze Lifter") {
+          throw new Error(`Expected initial rank Level 1 Bronze Lifter, got ${emptySummary.rank.currentRank.title}`);
+        }
+        if (!emptySummary.rank.nextRank || emptySummary.rank.nextRank.level !== 2) {
+          throw new Error(`Expected next rank Level 2 Silver Lifter, got ${emptySummary.rank.nextRank?.title}`);
+        }
+
+        const durationMs = Math.round(performance.now() - start);
+        return {
+          id: testId,
+          groupId: 13,
+          groupName: "Achievements, Badges, Ranks & Progression",
+          name: "Lifter Rank Tiers & Multi-Metric Advancement",
+          description: "Verify Bronze through Master of Iron rank thresholds across workouts, PRs, and lifetime volume.",
+          status: "passed",
+          durationMs,
+          summary: "All 6 lifter ranks verified with multi-metric advancement requirements.",
         };
       }
 

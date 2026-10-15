@@ -12,26 +12,57 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* Base viewport styling: lock outer window to prevent rubber-banding and elastic bounces */
-html, body {
-  overflow: hidden;
+/* Global box-sizing and media constraints to eliminate layout expansion */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Base viewport styling: absolute prevention of horizontal scrolling and swipe rubberbanding */
+html {
   height: 100%;
   width: 100%;
-  margin: 0;
-  padding: 0;
-  position: fixed;
+  max-width: 100%;
+  overflow-x: hidden !important;
+  overscroll-behavior-x: none;
   background-color: #fafaf8;
   color: #18181b;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Force the inner view container to handle its own smooth vertical scrolling */
-main {
+body {
   height: 100%;
   width: 100%;
+  max-width: 100%;
+  overflow-x: hidden !important;
   overflow-y: auto;
+  overscroll-behavior-x: none;
+  touch-action: pan-y;
+  background-color: #fafaf8;
+  color: #18181b;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Force view containers to stay within viewport bounds and prevent horizontal scroll */
+main {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
+}
+
+/* Prevent images, SVGs, preformatted code, and media from blowing out screen width */
+img, svg, video, canvas, audio, iframe, embed, object {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Utility for contained horizontal swipe strips (e.g., category tabs, nav pills) */
+.horizontal-scroll-container {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Utility to hide scrollbars while maintaining scroll functionality */

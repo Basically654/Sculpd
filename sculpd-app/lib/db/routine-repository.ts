@@ -402,6 +402,9 @@ export async function createRoutine(
   input: {
     name: string;
     description?: string;
+    daysOfWeek?: string[];
+    dayName?: string;
+    slug?: string;
     exercises?: Array<{
       exerciseId: string;
       targetSets: number;
@@ -425,6 +428,9 @@ export async function createRoutine(
     userId,
     name: input.name.trim(),
     description: input.description?.trim() || undefined,
+    daysOfWeek: input.daysOfWeek,
+    dayName: input.dayName?.trim() || undefined,
+    slug: input.slug?.trim() || undefined,
     displayOrder: existingCount + 1,
     createdAt: now,
     updatedAt: now,

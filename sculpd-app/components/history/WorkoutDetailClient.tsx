@@ -54,7 +54,7 @@ export default function WorkoutDetailClient({
 
   if (!workoutDetail) {
     return (
-      <main className="min-h-screen bg-[#fafaf8] text-zinc-900 p-4 font-sans flex flex-col justify-between max-w-md mx-auto w-full">
+      <main className="min-h-screen bg-[#fafaf8] text-zinc-900 p-4 font-sans flex flex-col justify-between max-w-md mx-auto w-full overflow-x-hidden">
         <div>
           <UserBar />
           <div className="pt-4 pb-8 space-y-4 text-center">
@@ -74,7 +74,7 @@ export default function WorkoutDetailClient({
   }
 
   return (
-    <main className="min-h-screen bg-[#fafaf8] text-zinc-900 p-4 font-sans flex flex-col justify-between pb-12 max-w-md mx-auto w-full">
+    <main className="min-h-screen bg-[#fafaf8] text-zinc-900 p-4 font-sans flex flex-col justify-between pb-12 max-w-md mx-auto w-full overflow-x-hidden">
       {/* Upper Navigation & Session Header */}
       <div className="space-y-6">
         <UserBar />

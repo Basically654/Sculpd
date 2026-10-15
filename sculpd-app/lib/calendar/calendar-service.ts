@@ -4,6 +4,8 @@ import {
   WorkoutSession,
   WorkoutSet,
   WorkoutSessionStatus,
+  WorkoutSkip,
+  FitnessAlternative,
 } from "@/types/models";
 import {
   calculateWorkoutDuration,
@@ -190,11 +192,17 @@ export interface CalendarMonthData {
   days: CalendarDay[];
   daysWithCompletedWorkouts: Set<string>;
   daysWithInProgressWorkouts: Set<string>;
+  daysWithSkippedWorkouts: Set<string>;
+  daysWithAlternatives: Set<string>;
   sessionsByDate: Map<string, DayWorkoutSummary[]>;
+  skipsByDate: Map<string, WorkoutSkip>;
+  alternativesByDate: Map<string, FitnessAlternative[]>;
   monthStats: {
     totalCompletedWorkouts: number;
     activeDaysCount: number;
     restDaysCount: number;
+    skipsCount: number;
+    alternativesCount: number;
     totalVolume: number;
     formattedTotalVolume: string;
   };
@@ -226,15 +234,46 @@ export async function getCalendarMonthData(
     year: "numeric",
   });
 
-  // Single fast query for all user sessions
-  const allUserSessions = await db.workoutSessions
-    .where("userId")
-    .equals(userId)
-    .toArray();
+  // Single fast query for user sessions, skips, and fitness alternatives
+  const [allUserSessions, allUserSkips, allUserAlternatives] = await Promise.all([
+    db.workoutSessions.where("userId").equals(userId).toArray(),
+    db.skips ? db.skips.where("userId").equals(userId).toArray() : Promise.resolve([]),
+    db.fitnessAlternatives
+      ? db.fitnessAlternatives.where("userId").equals(userId).toArray()
+      : Promise.resolve([]),
+  ]);
 
   const sessionsByDate = new Map<string, DayWorkoutSummary[]>();
   const daysWithCompletedWorkouts = new Set<string>();
   const daysWithInProgressWorkouts = new Set<string>();
+  const daysWithSkippedWorkouts = new Set<string>();
+  const daysWithAlternatives = new Set<string>();
+  const skipsByDate = new Map<string, WorkoutSkip>();
+  const alternativesByDate = new Map<string, FitnessAlternative[]>();
+
+  let skipsInMonth = 0;
+  for (const skip of allUserSkips) {
+    if (skip.isDeleted || skip.supersededBySessionId) continue;
+    skipsByDate.set(skip.dateKey, skip);
+    daysWithSkippedWorkouts.add(skip.dateKey);
+    const { year: skYear, month: skMonth } = parseLocalDateKey(skip.dateKey);
+    if (skYear === year && skMonth === month + 1) {
+      skipsInMonth++;
+    }
+  }
+
+  let alternativesInMonth = 0;
+  for (const alt of allUserAlternatives) {
+    if (alt.isDeleted) continue;
+    const list = alternativesByDate.get(alt.dateKey) || [];
+    list.push(alt);
+    alternativesByDate.set(alt.dateKey, list);
+    daysWithAlternatives.add(alt.dateKey);
+    const { year: aYear, month: aMonth } = parseLocalDateKey(alt.dateKey);
+    if (aYear === year && aMonth === month + 1) {
+      alternativesInMonth++;
+    }
+  }
 
   let totalCompletedWorkoutsInMonth = 0;
   let totalVolumeInMonth = 0;
@@ -333,11 +372,17 @@ export async function getCalendarMonthData(
     days,
     daysWithCompletedWorkouts,
     daysWithInProgressWorkouts,
+    daysWithSkippedWorkouts,
+    daysWithAlternatives,
     sessionsByDate,
+    skipsByDate,
+    alternativesByDate,
     monthStats: {
       totalCompletedWorkouts: totalCompletedWorkoutsInMonth,
       activeDaysCount,
       restDaysCount,
+      skipsCount: skipsInMonth,
+      alternativesCount: alternativesInMonth,
       totalVolume: totalVolumeInMonth,
       formattedTotalVolume: formatWorkoutVolume(totalVolumeInMonth),
     },

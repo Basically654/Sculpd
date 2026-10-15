@@ -13,6 +13,9 @@ import {
 } from "@/lib/calendar/calendar-service";
 import EditSessionDateModal from "./EditSessionDateModal";
 import BackfillWorkoutModal from "./BackfillWorkoutModal";
+import SkipConfirmationModal from "./SkipConfirmationModal";
+import LogAlternativeModal from "./LogAlternativeModal";
+import { cancelWorkoutSkip, isPlannedWorkoutDay } from "@/lib/accountability/accountability-service";
 
 interface WorkoutCalendarProps {
   userId: string;
@@ -34,6 +37,15 @@ export default function WorkoutCalendar({ userId }: WorkoutCalendarProps) {
     completedAt?: string | null;
   } | null>(null);
   const [isBackfillModalOpen, setIsBackfillModalOpen] = useState<boolean>(false);
+  const [isSkipModalOpen, setIsSkipModalOpen] = useState<boolean>(false);
+  const [isAlternativeModalOpen, setIsAlternativeModalOpen] = useState<boolean>(false);
+  const [plannedInfo, setPlannedInfo] = useState<{ isPlanned: boolean; routineName?: string; routine?: any } | null>(null);
+
+  React.useEffect(() => {
+    if (userId && selectedDateKey) {
+      isPlannedWorkoutDay(userId, selectedDateKey).then(setPlannedInfo).catch(() => setPlannedInfo(null));
+    }
+  }, [userId, selectedDateKey]);
 
   // Live query for month data
   const monthData = useLiveQuery(
@@ -74,10 +86,19 @@ export default function WorkoutCalendar({ userId }: WorkoutCalendarProps) {
   };
 
   const selectedDaySessions = monthData?.sessionsByDate.get(selectedDateKey) || [];
+  const selectedDaySkip = monthData?.skipsByDate?.get(selectedDateKey);
+  const selectedDayAlternatives = monthData?.alternativesByDate?.get(selectedDateKey) || [];
   const isSelectedDateFuture = selectedDateKey > todayKey;
+  const hasCompletedToday = selectedDaySessions.some((s) => s.status === "completed");
+  const canSkip = !isSelectedDateFuture && !hasCompletedToday && !selectedDaySkip;
+
+  const handleUnskip = async () => {
+    if (!selectedDaySkip) return;
+    await cancelWorkoutSkip(userId, selectedDaySkip.id);
+  };
 
   return (
-    <div className="w-full space-y-4 font-sans">
+    <div className="w-full max-w-full space-y-4 font-sans overflow-hidden">
       {/* Month Navigation & Today Button */}
       <div className="flex items-center justify-between">
         <div className="flex items-baseline gap-2">
@@ -153,7 +174,7 @@ export default function WorkoutCalendar({ userId }: WorkoutCalendarProps) {
       )}
 
       {/* Monthly Calendar Grid */}
-      <div className="rounded-3xl bg-white border border-stone-200 p-3 sm:p-4 shadow-xs space-y-2">
+      <div className="w-full max-w-full rounded-3xl bg-white border border-stone-200 p-2.5 sm:p-4 shadow-xs space-y-2 overflow-hidden">
         {/* Weekday Labels */}
         <div className="grid grid-cols-7 gap-1 text-center font-mono text-[11px] font-bold text-stone-400 uppercase py-1">
           {WEEKDAY_NAMES.map((name) => (
@@ -166,6 +187,8 @@ export default function WorkoutCalendar({ userId }: WorkoutCalendarProps) {
           {monthData?.days.map((day: CalendarDay) => {
             const hasCompleted = monthData.daysWithCompletedWorkouts.has(day.dateKey);
             const hasInProgress = monthData.daysWithInProgressWorkouts.has(day.dateKey);
+            const hasSkipped = monthData.daysWithSkippedWorkouts?.has(day.dateKey);
+            const hasAlternative = monthData.daysWithAlternatives?.has(day.dateKey);
             const isSelected = selectedDateKey === day.dateKey;
             const daySessions = monthData.sessionsByDate.get(day.dateKey) || [];
             const completedCount = daySessions.filter((s) => s.status === "completed").length;
@@ -227,6 +250,24 @@ export default function WorkoutCalendar({ userId }: WorkoutCalendarProps) {
                       title="Workout in progress"
                     />
                   )}
+
+                  {!hasCompleted && !hasInProgress && hasSkipped && (
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        isSelected ? "bg-amber-300" : "bg-amber-500"
+                      }`}
+                      title="Skipped planned workout"
+                    />
+                  )}
+
+                  {hasAlternative && (
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        isSelected ? "bg-sky-300" : "bg-sky-500"
+                      }`}
+                      title="Fitness alternative logged"
+                    />
+                  )}
                 </div>
               </button>
             );
@@ -234,19 +275,27 @@ export default function WorkoutCalendar({ userId }: WorkoutCalendarProps) {
         </div>
 
         {/* Legend */}
-        <div className="pt-2 border-t border-stone-100 flex items-center justify-between text-[10px] font-mono text-stone-500 px-1">
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5">
+        <div className="pt-2 border-t border-stone-100 flex items-center justify-between text-[10px] font-mono text-stone-500 px-1 flex-wrap gap-y-1">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
               <span>Completed</span>
             </span>
-            <span className="flex items-center gap-1.5">
+            <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-amber-500" />
               <span>In Progress</span>
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="text-stone-400">Clear</span>
-              <span>Rest Day</span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              <span>Skipped</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+              <span>Alternative</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="text-stone-300">○</span>
+              <span>Rest</span>
             </span>
           </div>
 
@@ -261,7 +310,7 @@ export default function WorkoutCalendar({ userId }: WorkoutCalendarProps) {
       </div>
 
       {/* Selected Date Details Panel */}
-      <div className="rounded-3xl bg-white border border-stone-200 p-4 shadow-xs space-y-3">
+      <div className="w-full max-w-full rounded-3xl bg-white border border-stone-200 p-4 shadow-xs space-y-3 overflow-hidden">
         {/* Selected date header */}
         <div className="flex items-center justify-between border-b border-stone-100 pb-2">
           <div>
@@ -273,21 +322,120 @@ export default function WorkoutCalendar({ userId }: WorkoutCalendarProps) {
             </p>
           </div>
 
-          {/* Quick backfill button for selected day */}
-          {!isSelectedDateFuture && (
-            <button
-              type="button"
-              onClick={() => setIsBackfillModalOpen(true)}
-              className="text-xs font-mono font-bold text-stone-600 hover:text-zinc-900 bg-stone-50 hover:bg-stone-100 border border-stone-200 px-2.5 py-1 rounded-xl transition-colors cursor-pointer"
-            >
-              + Backfill
-            </button>
-          )}
+          {/* Action buttons for selected day */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {!isSelectedDateFuture && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsAlternativeModalOpen(true)}
+                  className="text-xs font-mono font-bold text-sky-800 hover:text-sky-950 bg-sky-50 hover:bg-sky-100 border border-sky-200 px-2 py-1 rounded-xl transition-colors cursor-pointer"
+                  title="Log walking, mobility, or recovery to earn an extra skip"
+                >
+                  + Alt
+                </button>
+
+                {canSkip && (
+                  <button
+                    type="button"
+                    onClick={() => setIsSkipModalOpen(true)}
+                    className="text-xs font-mono font-bold text-amber-800 hover:text-amber-950 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2 py-1 rounded-xl transition-colors cursor-pointer"
+                    title="Mark planned workout as skipped"
+                  >
+                    Skip Day
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setIsBackfillModalOpen(true)}
+                  className="text-xs font-mono font-bold text-stone-600 hover:text-zinc-900 bg-stone-50 hover:bg-stone-100 border border-stone-200 px-2.5 py-1 rounded-xl transition-colors cursor-pointer"
+                >
+                  + Backfill
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Day Sessions List or Empty Rest Day Message */}
-        {selectedDaySessions.length > 0 ? (
+        {selectedDaySessions.length > 0 || selectedDaySkip || selectedDayAlternatives.length > 0 ? (
           <div className="space-y-2.5">
+            {/* If there's an explicit skip */}
+            {selectedDaySkip && (
+              <div className="p-3.5 rounded-2xl bg-amber-50/80 border border-amber-200/90 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-sm font-bold text-amber-950">
+                        {selectedDaySkip.routineName ? `${selectedDaySkip.routineName} (Skipped)` : "Planned Workout Skipped"}
+                      </h4>
+                      <span className="text-[9px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300">
+                        {selectedDaySkip.skipType === "earned" ? "Earned Skip Used" : "Monthly Free Skip"}
+                      </span>
+                    </div>
+                    {selectedDaySkip.reason && (
+                      <p className="text-xs text-amber-800 mt-1 italic">
+                        &quot;{selectedDaySkip.reason}&quot;
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleUnskip}
+                    className="text-xs font-mono font-bold text-amber-900 hover:text-amber-950 bg-amber-100/70 hover:bg-amber-200 border border-amber-300 px-2 py-1 rounded-lg transition-colors cursor-pointer"
+                    title="Undo this skip and restore your skip credit"
+                  >
+                    Un-skip
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* If there are fitness alternatives */}
+            {selectedDayAlternatives.map((alt) => (
+              <div
+                key={alt.id}
+                className="p-3 rounded-2xl bg-sky-50/70 border border-sky-200/80 space-y-1.5"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">
+                      {(alt.activityType || alt.type) === "walking"
+                        ? "🚶"
+                        : (alt.activityType || alt.type) === "mobility"
+                        ? "🧘"
+                        : (alt.activityType || alt.type) === "recovery"
+                        ? "🌊"
+                        : "🚴"}
+                    </span>
+                    <div>
+                      <h4 className="text-xs font-bold text-sky-950">
+                        {alt.title}
+                      </h4>
+                      <p className="text-[11px] font-mono text-sky-700">
+                        {alt.durationMinutes} min • {(alt.activityType || alt.type || "").replace("_", " ")}
+                      </p>
+                    </div>
+                  </div>
+                  {alt.skipEarned ? (
+                    <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-300">
+                      +1 Earned Skip
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-mono text-stone-500">
+                      &lt;20 min
+                    </span>
+                  )}
+                </div>
+                {alt.notes && (
+                  <p className="text-xs text-stone-600 pl-6 italic">
+                    {alt.notes}
+                  </p>
+                )}
+              </div>
+            ))}
+
             {selectedDaySessions.map((session: DayWorkoutSummary) => (
               <div
                 key={session.sessionId}
@@ -417,6 +565,30 @@ export default function WorkoutCalendar({ userId }: WorkoutCalendarProps) {
           onSuccess={(session) => {
             setSelectedDateKey(getLocalDateKey(session.startedAt));
           }}
+        />
+      )}
+
+      {/* Skip Confirmation Modal */}
+      {isSkipModalOpen && (
+        <SkipConfirmationModal
+          isOpen={isSkipModalOpen}
+          userId={userId}
+          dateKey={selectedDateKey}
+          routineName={plannedInfo?.routineName}
+          routineId={plannedInfo?.routine?.id}
+          onClose={() => setIsSkipModalOpen(false)}
+          onSuccess={() => setIsSkipModalOpen(false)}
+        />
+      )}
+
+      {/* Log Alternative Modal */}
+      {isAlternativeModalOpen && (
+        <LogAlternativeModal
+          isOpen={isAlternativeModalOpen}
+          userId={userId}
+          initialDateKey={selectedDateKey <= todayKey ? selectedDateKey : todayKey}
+          onClose={() => setIsAlternativeModalOpen(false)}
+          onSuccess={() => setIsAlternativeModalOpen(false)}
         />
       )}
     </div>

@@ -362,7 +362,7 @@ export default function DevConsoleClient() {
   // ==========================================
   if (!isDevModeActive) {
     return (
-      <main className="h-full w-full overflow-y-auto bg-stone-900 text-stone-100 flex flex-col justify-center items-center px-4 py-12">
+      <main className="h-full w-full overflow-y-auto overflow-x-hidden bg-stone-900 text-stone-100 flex flex-col justify-center items-center px-4 py-12">
         <div className="w-full max-w-md bg-stone-800/90 border border-amber-500/30 rounded-2xl p-6 sm:p-8 shadow-2xl backdrop-blur-sm">
           <div className="flex items-center space-x-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-xl font-bold border border-amber-500/40">
@@ -454,7 +454,7 @@ export default function DevConsoleClient() {
   // VIEW: AUTHENTICATED DEV CONSOLE
   // ==========================================
   return (
-    <main className="h-full w-full overflow-y-auto bg-stone-950 text-stone-100 flex flex-col overscroll-y-contain">
+    <main className="h-full w-full overflow-y-auto overflow-x-hidden bg-stone-950 text-stone-100 flex flex-col overscroll-y-contain">
       {/* Top Header */}
       <header className="border-b border-stone-800 bg-stone-900/90 backdrop-blur-md sticky top-0 z-50 px-4 py-3">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
@@ -501,7 +501,7 @@ export default function DevConsoleClient() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="max-w-7xl mx-auto mt-3 flex space-x-1 sm:space-x-2 border-b border-stone-800/80 overflow-x-auto scrollbar-none">
+        <div className="max-w-7xl mx-auto mt-3 flex space-x-1 sm:space-x-2 border-b border-stone-800/80 overflow-x-auto scrollbar-none overscroll-x-contain touch-pan-x">
           <button
             onClick={() => setActiveTab("telemetry")}
             className={`px-3 py-2 text-xs font-semibold rounded-t-lg transition-colors border-b-2 whitespace-nowrap ${

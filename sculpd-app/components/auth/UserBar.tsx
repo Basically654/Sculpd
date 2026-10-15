@@ -113,23 +113,23 @@ export default function UserBar() {
   const theme = BADGE_COLOR_MAP[activeUser.avatarColor] || BADGE_COLOR_MAP.emerald;
 
   return (
-    <div className="w-full flex items-center justify-between pb-3.5 mb-2 border-b border-stone-200/80">
-      <div className="flex items-center gap-2">
+    <div className="w-full max-w-full flex items-center justify-between pb-3 mb-2 border-b border-stone-200/80 gap-1.5 sm:gap-2 overflow-hidden">
+      <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1 overflow-hidden">
         <button
           type="button"
           onClick={switchUser}
-          className="flex items-center gap-2 group text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 rounded-lg -m-1 p-1 hover:bg-stone-100/80 active:scale-95 transition-all"
+          className="flex items-center gap-2 group text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 rounded-lg -m-1 p-1 hover:bg-stone-100/80 active:scale-95 transition-all min-w-0 shrink"
           title="Switch athlete profile"
           aria-label={`Switch athlete profile (currently signed in as ${activeUser.displayName})`}
         >
           <div
-            className={`w-7 h-7 rounded-full ${theme.bg} border ${theme.border} ${theme.text} flex items-center justify-center text-xs font-bold shadow-xs group-hover:scale-105 transition-transform`}
+            className={`w-7 h-7 rounded-full ${theme.bg} border ${theme.border} ${theme.text} flex items-center justify-center text-xs font-bold shadow-xs group-hover:scale-105 transition-transform shrink-0`}
           >
             {activeUser.displayName.charAt(0).toUpperCase()}
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-1">
-              <span className="text-xs font-bold text-zinc-900 tracking-tight block group-hover:text-black">
+              <span className="text-xs font-bold text-zinc-900 tracking-tight block group-hover:text-black truncate max-w-[85px] sm:max-w-[130px]">
                 {activeUser.displayName}
               </span>
               <svg
@@ -138,7 +138,7 @@ export default function UserBar() {
                 viewBox="0 0 24 24"
                 strokeWidth={2.5}
                 stroke="currentColor"
-                className="w-3 h-3 text-stone-400 group-hover:text-zinc-600 transition-colors"
+                className="w-3 h-3 text-stone-400 group-hover:text-zinc-600 transition-colors shrink-0"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
               </svg>
@@ -158,7 +158,7 @@ export default function UserBar() {
                 }
               }}
               title="Click to update athlete bodyweight"
-              className="text-[10px] font-medium text-stone-500 hover:text-zinc-900 block cursor-pointer transition-colors"
+              className="text-[10px] font-medium text-stone-500 hover:text-zinc-900 block cursor-pointer transition-colors truncate max-w-[85px] sm:max-w-[130px]"
             >
               {typeof activeUser.bodyweight === "number"
                 ? `${activeUser.bodyweight} lbs BW`
@@ -167,17 +167,17 @@ export default function UserBar() {
           </div>
         </button>
 
-        <span className="text-stone-300 text-[10px] self-center">•</span>
+        <span className="text-stone-300 text-[10px] self-center shrink-0 hidden xs:inline">•</span>
 
         {/* Subtle sync status indicator */}
         <button
           type="button"
           onClick={triggerSync}
           title="Click to trigger sync"
-          className="flex items-center gap-1.5 hover:opacity-80 transition-opacity cursor-pointer self-center"
+          className="flex items-center gap-1 hover:opacity-80 transition-opacity cursor-pointer self-center shrink-0 min-w-0"
         >
           <span
-            className={`w-1.5 h-1.5 rounded-full ${
+            className={`w-1.5 h-1.5 rounded-full shrink-0 ${
               syncState === "synced"
                 ? "bg-emerald-600"
                 : syncState === "syncing"
@@ -187,21 +187,21 @@ export default function UserBar() {
                 : "bg-amber-500"
             }`}
           />
-          <span className="text-[10px] font-mono text-stone-500">
+          <span className="text-[10px] font-mono text-stone-500 truncate max-w-[65px] sm:max-w-none">
             {syncState === "syncing"
               ? "Syncing..."
               : syncState === "offline"
               ? pendingCount > 0
-                ? `Offline (${pendingCount} local)`
+                ? `Offline (${pendingCount})`
                 : "Offline"
               : pendingCount > 0
-              ? `Saved locally (${pendingCount})`
+              ? `Local (${pendingCount})`
               : "Synced"}
           </span>
         </button>
       </div>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
         {hasPushSupport && (
           <button
             type="button"
@@ -212,30 +212,31 @@ export default function UserBar() {
                 ? "Rest Push Alerts Active (tap to disable)"
                 : "Enable Lock Screen Rest Alerts"
             }
-            className={`flex items-center gap-1 text-[10px] font-mono font-medium px-2 py-1 rounded-lg border transition-colors cursor-pointer ${
+            className={`flex items-center gap-1 text-[10px] font-mono font-medium px-1.5 sm:px-2 py-1 rounded-lg border transition-colors cursor-pointer shrink-0 ${
               isPushActive
                 ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                 : "bg-stone-50 text-stone-600 hover:text-zinc-900 border-stone-200"
             }`}
           >
-            <span>{isPushActive ? "🔔 Alerts on" : "🔕 Alerts off"}</span>
+            <span>{isPushActive ? "🔔" : "🔕"}</span>
+            <span className="hidden sm:inline">{isPushActive ? "Alerts on" : "Alerts off"}</span>
           </button>
         )}
 
         {isDevModeActive ? (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <Link
               href="/dev"
-              className="text-xs font-mono font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg px-2 py-1 shadow-xs transition-colors cursor-pointer flex items-center gap-1"
+              className="text-[11px] sm:text-xs font-mono font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg px-1.5 sm:px-2 py-1 shadow-xs transition-colors cursor-pointer flex items-center gap-1 shrink-0"
               title="Open Developer Console"
             >
               <span>🛠️</span>
-              <span>DEV</span>
+              <span className="hidden xs:inline">DEV</span>
             </Link>
             <button
               type="button"
               onClick={logoutDev}
-              className="text-[10px] font-mono text-stone-500 hover:text-stone-800 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-lg px-1.5 py-1 transition-colors cursor-pointer"
+              className="text-[10px] font-mono text-stone-500 hover:text-stone-800 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-lg px-1.5 py-1 transition-colors cursor-pointer shrink-0"
               title="Exit Developer Mode"
             >
               Exit
@@ -244,18 +245,18 @@ export default function UserBar() {
         ) : (
           <Link
             href="/dev"
-            className="text-[11px] font-mono font-medium text-stone-500 hover:text-amber-800 hover:bg-amber-50 border border-stone-200 hover:border-amber-200 rounded-lg px-2 py-1 shadow-xs transition-colors cursor-pointer flex items-center gap-1"
+            className="text-[11px] font-mono font-medium text-stone-500 hover:text-amber-800 hover:bg-amber-50 border border-stone-200 hover:border-amber-200 rounded-lg px-1.5 sm:px-2 py-1 shadow-xs transition-colors cursor-pointer flex items-center gap-1 shrink-0"
             title="Open Developer Mode"
           >
             <span>🛠️</span>
-            <span>Dev</span>
+            <span className="hidden xs:inline">Dev</span>
           </Link>
         )}
 
         <button
           type="button"
           onClick={() => setIsBackupModalOpen(true)}
-          className="text-xs font-medium text-zinc-600 hover:text-zinc-900 bg-white hover:bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1 shadow-xs transition-colors cursor-pointer"
+          className="text-xs font-medium text-zinc-600 hover:text-zinc-900 bg-white hover:bg-stone-50 border border-stone-200 rounded-lg px-2 sm:px-2.5 py-1 shadow-xs transition-colors cursor-pointer shrink-0"
           title="Backup & Restore local database"
         >
           Backup
@@ -264,7 +265,8 @@ export default function UserBar() {
         <button
           type="button"
           onClick={switchUser}
-          className="text-xs font-medium text-zinc-600 hover:text-zinc-900 bg-white hover:bg-stone-50 border border-stone-200 rounded-lg px-2.5 py-1 shadow-xs transition-colors cursor-pointer"
+          className="text-xs font-medium text-zinc-600 hover:text-zinc-900 bg-white hover:bg-stone-50 border border-stone-200 rounded-lg px-2 sm:px-2.5 py-1 shadow-xs transition-colors cursor-pointer shrink-0"
+          title="Switch athlete profile"
         >
           Switch
         </button>

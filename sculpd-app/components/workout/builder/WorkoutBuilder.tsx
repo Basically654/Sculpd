@@ -240,7 +240,7 @@ export default function WorkoutBuilder({ routineId }: WorkoutBuilderProps) {
   }
 
   return (
-    <main className="min-h-screen bg-[#fafaf8] text-zinc-900 p-4 font-sans flex flex-col justify-between pb-8 max-w-md mx-auto w-full">
+    <main className="min-h-screen bg-[#fafaf8] text-zinc-900 p-4 font-sans flex flex-col justify-between pb-8 max-w-md mx-auto w-full overflow-x-hidden">
       <div>
         {/* Navigation Bar */}
         <div className="flex items-center justify-between py-2 mb-4">

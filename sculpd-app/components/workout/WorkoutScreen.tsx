@@ -142,7 +142,7 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
   // Error handling
   if (error || !routine || !currentExercise || !session) {
     return (
-      <main className="min-h-screen bg-[#fafaf8] text-zinc-900 p-6 max-w-md mx-auto flex flex-col items-center justify-center text-center space-y-4 font-mono">
+      <main className="min-h-screen bg-[#fafaf8] text-zinc-900 p-6 max-w-md mx-auto w-full overflow-x-hidden flex flex-col items-center justify-center text-center space-y-4 font-mono">
         <p className="text-rose-600 text-xs">{error || "Could not load workout."}</p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Link
@@ -263,7 +263,7 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
   // Sculp'd disappears and timer becomes dominant while resting, unless minimized in Dev Mode to scroll workout
   if (timer.isActive && !isRestMinimized) {
     return (
-      <main className="h-full w-full overflow-y-auto bg-[#fafaf8] text-zinc-900 p-4 max-w-md mx-auto font-sans flex flex-col justify-between select-none">
+      <main className="h-full w-full overflow-y-auto overflow-x-hidden bg-[#fafaf8] text-zinc-900 p-4 max-w-md mx-auto font-sans flex flex-col justify-between select-none">
         <DominantRestView
           exercise={currentExercise}
           lastLoggedSet={lastLoggedSet}
@@ -292,7 +292,7 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
   }
 
   return (
-    <main className="h-full w-full overflow-y-auto bg-[#fafaf8] text-zinc-900 p-4 pb-12 max-w-md mx-auto font-sans flex flex-col justify-between select-none">
+    <main className="h-full w-full overflow-y-auto overflow-x-hidden bg-[#fafaf8] text-zinc-900 p-4 pb-12 max-w-md mx-auto font-sans flex flex-col justify-between select-none">
       {/* Floating Developer Rest Timer Bar when Minimized */}
       {timer.isActive && isRestMinimized && (
         <aside

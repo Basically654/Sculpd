@@ -351,17 +351,25 @@ async function runDevModeTests() {
   const initialGroups = getInitialTestGroups();
   assert(initialGroups.length === 14, `All 14 test groups defined (got ${initialGroups.length})`);
 
-  // Verify Groups 12 and 13 are honestly reported as NOT IMPLEMENTED
+  // Verify Groups 12 and 13 are fully implemented and pending execution
   const group12 = initialGroups.find((g) => g.id === 12);
   const group13 = initialGroups.find((g) => g.id === 13);
   assert(
-    group12?.status === "not_implemented",
-    "Group 12 (Monthly skips) is honestly marked NOT IMPLEMENTED"
+    group12?.status === "pending",
+    "Group 12 (Monthly Skips & Alternatives) is active and implemented"
   );
   assert(
-    group13?.status === "not_implemented",
-    "Group 13 (Gamification & Badges) is honestly marked NOT IMPLEMENTED"
+    group13?.status === "pending",
+    "Group 13 (Achievements, Badges & Ranks) is active and implemented"
   );
+
+  // Run group 12 (Monthly Skips & Alternatives)
+  const group12Result = await runTestGroup(group12!);
+  assert(group12Result.status === "passed", "Group 12 (Monthly Skips) passed all tests");
+
+  // Run group 13 (Achievements, Badges & Ranks)
+  const group13Result = await runTestGroup(group13!);
+  assert(group13Result.status === "passed", "Group 13 (Achievements & Ranks) passed all tests");
 
   // Run individual test case
   const singleTestResult = await runTestCase("auth_dev_credentials");
@@ -391,8 +399,8 @@ async function runDevModeTests() {
   const summary = calculateSuiteSummary(initialGroups);
   assert(summary.total > 20, `Test suite total tests counted: ${summary.total}`);
   assert(
-    summary.notImplemented === 2,
-    `Summary correctly counts 2 unimplemented roadmap tests (got ${summary.notImplemented})`
+    summary.notImplemented === 0,
+    `Summary correctly counts 0 unimplemented roadmap tests (got ${summary.notImplemented})`
   );
 
   // -----------------------------------------------------------------

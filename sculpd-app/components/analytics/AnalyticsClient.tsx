@@ -123,7 +123,7 @@ export default function AnalyticsClient() {
   const hasHistory = exercises && exercises.length > 0;
 
   return (
-    <main className="min-h-screen bg-[#fafaf8] text-zinc-900 p-4 font-sans flex flex-col justify-between pb-12 max-w-md mx-auto w-full">
+    <main className="min-h-screen bg-[#fafaf8] text-zinc-900 p-4 font-sans flex flex-col justify-between pb-12 max-w-md mx-auto w-full overflow-x-hidden">
       <div>
         <UserBar />
 
@@ -138,14 +138,23 @@ export default function AnalyticsClient() {
               <span>←</span>
               <span>Dashboard</span>
             </Link>
-            <Link
-              href="/history"
-              className="text-stone-400 hover:text-zinc-900 uppercase font-bold flex items-center gap-1 transition-colors p-1 -m-1"
-              title="View Completed Workouts"
-            >
-              <span>History</span>
-              <span>→</span>
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/progression"
+                className="text-stone-400 hover:text-zinc-900 uppercase font-bold flex items-center gap-1 transition-colors p-1 -m-1"
+                title="View Ranks & Achievements"
+              >
+                <span>Ranks</span>
+              </Link>
+              <Link
+                href="/history"
+                className="text-stone-400 hover:text-zinc-900 uppercase font-bold flex items-center gap-1 transition-colors p-1 -m-1"
+                title="View Completed Workouts"
+              >
+                <span>History</span>
+                <span>→</span>
+              </Link>
+            </div>
           </div>
 
           <div className="flex items-baseline justify-between">

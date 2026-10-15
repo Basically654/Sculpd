@@ -9,9 +9,11 @@ import {
   WorkoutSet,
   SyncQueueItem,
   SyncMeta,
+  WorkoutSkip,
+  FitnessAlternative,
 } from "@/types/models";
 
-export const CURRENT_DB_VERSION = 1;
+export const CURRENT_DB_VERSION = 2;
 export const DB_NAME = "sculpd_v3_db";
 
 export class SculpdDatabase extends Dexie {
@@ -23,6 +25,8 @@ export class SculpdDatabase extends Dexie {
   sets!: Table<WorkoutSet, string>;
   syncQueue!: Table<SyncQueueItem, string>;
   syncMeta!: Table<SyncMeta, string>;
+  skips!: Table<WorkoutSkip, string>;
+  fitnessAlternatives!: Table<FitnessAlternative, string>;
 
   constructor(databaseName: string = DB_NAME) {
     super(databaseName);
@@ -42,6 +46,12 @@ export class SculpdDatabase extends Dexie {
       syncQueue:
         "id, userId, status, timestamp, [userId+status], [status+timestamp]",
       syncMeta: "key, userId",
+    });
+
+    // Version 2: Monthly Accountability & Skips System
+    this.version(2).stores({
+      skips: "id, userId, dateKey, monthKey, [userId+dateKey], [userId+monthKey], createdAt",
+      fitnessAlternatives: "id, userId, dateKey, activityType, [userId+dateKey], createdAt",
     });
   }
 }

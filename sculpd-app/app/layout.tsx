@@ -12,6 +12,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: "cover",
   themeColor: "#fafaf8",
 };
 
@@ -56,9 +57,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className="h-full bg-[#fafaf8] text-zinc-900 antialiased overflow-hidden select-none"
+      className="h-full w-full bg-[#fafaf8] text-zinc-900 antialiased overflow-x-hidden select-none"
     >
-      <body className="h-full w-full overflow-y-auto bg-[#fafaf8] text-zinc-900">
+      <body className="h-full w-full max-w-full overflow-x-hidden overflow-y-auto overscroll-x-none bg-[#fafaf8] text-zinc-900">
         <DevProvider>
           <UserProvider>
             <TimerProvider>

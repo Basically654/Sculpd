@@ -57,7 +57,8 @@ export interface Routine {
   updatedAt: string; // ISO 8601
   isDeleted?: boolean;
 
-  // Legacy compatibility fields
+  // Legacy and schedule fields
+  daysOfWeek?: string[];
   slug?: string;
   dayName?: string;
   focusTarget?: string;
@@ -145,7 +146,9 @@ export type SyncCollection =
   | "exercises"
   | "routine_exercises"
   | "workout_sessions"
-  | "sets";
+  | "sets"
+  | "skips"
+  | "fitness_alternatives";
 
 export type SyncStatus = "pending" | "syncing" | "failed";
 
@@ -238,4 +241,49 @@ export interface RestNotificationRecord {
   status: RestNotificationStatus;
   createdAt: string; // ISO 8601
   updatedAt: string; // ISO 8601
+}
+
+export type SkipType = "free" | "earned";
+
+/**
+ * Record of an explicit skip on a planned workout day.
+ */
+export interface WorkoutSkip {
+  id: string; // UUIDv4
+  userId: string; // Foreign key to User.id
+  dateKey: string; // Local "YYYY-MM-DD"
+  monthKey: string; // Local "YYYY-MM"
+  routineId?: string; // Planned routine id
+  routineName?: string; // Planned routine name snapshot
+  skipType: SkipType; // "free" | "earned"
+  reason?: string; // Optional user note (e.g. "Work trip", "Rest day")
+  supersededBySessionId?: string; // Set if user subsequently completed a workout on this date
+  createdAt: string; // ISO 8601
+  updatedAt: string; // ISO 8601
+  isDeleted?: boolean;
+}
+
+export type FitnessAlternativeType =
+  | "walking"
+  | "light_cardio"
+  | "mobility"
+  | "recovery";
+
+/**
+ * Non-gym active recovery / fitness alternative that can earn extra skips.
+ */
+export interface FitnessAlternative {
+  id: string; // UUIDv4
+  userId: string; // Foreign key to User.id
+  dateKey: string; // Local "YYYY-MM-DD"
+  activityType: FitnessAlternativeType;
+  type?: FitnessAlternativeType; // Convenience alias
+  title: string; // e.g. "Brisk Walk 30m", "Morning Flow"
+  durationMinutes: number; // e.g. 30 (>= 20 min qualifies for earned skip)
+  notes?: string;
+  skipEarned: boolean; // true if durationMinutes >= 20
+  skipUsedId?: string | null; // Id of WorkoutSkip that consumed this earned skip
+  createdAt: string; // ISO 8601
+  updatedAt: string; // ISO 8601
+  isDeleted?: boolean;
 }

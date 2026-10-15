@@ -7,6 +7,8 @@ import {
   Exercise,
   WorkoutSession,
   WorkoutSet,
+  WorkoutSkip,
+  FitnessAlternative,
 } from "@/types/models";
 import { sanitizeUser } from "./user-repository";
 import { hashPin } from "@/lib/crypto/pin";
@@ -25,6 +27,8 @@ export interface BackupData {
   exercises: Exercise[];
   workoutSessions: WorkoutSession[];
   sets: WorkoutSet[];
+  skips?: WorkoutSkip[];
+  fitnessAlternatives?: FitnessAlternative[];
   syncQueue?: any[];
   syncMeta?: any[];
 }
@@ -36,6 +40,8 @@ export interface BackupMetadata {
   exerciseCount: number;
   workoutSessionCount: number;
   setCount: number;
+  skipCount?: number;
+  fitnessAlternativeCount?: number;
 }
 
 export interface SculpdBackup {
@@ -179,15 +185,27 @@ export async function createBackup(
     await dbInstance.open();
   }
 
-  const [rawUsers, routines, routineExercises, exercises, workoutSessions, sets] =
-    await Promise.all([
-      dbInstance.users.toArray(),
-      dbInstance.routines.toArray(),
-      dbInstance.routineExercises.toArray(),
-      dbInstance.exercises.toArray(),
-      dbInstance.workoutSessions.toArray(),
-      dbInstance.sets.toArray(),
-    ]);
+  const [
+    rawUsers,
+    routines,
+    routineExercises,
+    exercises,
+    workoutSessions,
+    sets,
+    skips,
+    fitnessAlternatives,
+  ] = await Promise.all([
+    dbInstance.users.toArray(),
+    dbInstance.routines.toArray(),
+    dbInstance.routineExercises.toArray(),
+    dbInstance.exercises.toArray(),
+    dbInstance.workoutSessions.toArray(),
+    dbInstance.sets.toArray(),
+    dbInstance.skips ? dbInstance.skips.toArray().catch(() => []) : Promise.resolve([]),
+    dbInstance.fitnessAlternatives
+      ? dbInstance.fitnessAlternatives.toArray().catch(() => [])
+      : Promise.resolve([]),
+  ]);
 
   // Strip credentials, PIN hashes, and salts
   const safeUsers: SafeUser[] = rawUsers.map((u) => sanitizeUser(u));
@@ -227,6 +245,8 @@ export async function createBackup(
       exercises: healedExercises,
       workoutSessions,
       sets,
+      skips: skips || [],
+      fitnessAlternatives: fitnessAlternatives || [],
     },
     metadata,
   };
@@ -489,6 +509,10 @@ export function validateBackup(
 
   const { users, routines, routineExercises, exercises, workoutSessions, sets } =
     parsed.data;
+  const skips = Array.isArray(parsed.data.skips) ? parsed.data.skips : [];
+  const fitnessAlternatives = Array.isArray(parsed.data.fitnessAlternatives)
+    ? parsed.data.fitnessAlternatives
+    : [];
 
   // 4. Validate Users
   const userIds = new Set<string>();
@@ -682,6 +706,8 @@ export function validateBackup(
       exercises: healedExercises,
       workoutSessions,
       sets,
+      skips,
+      fitnessAlternatives,
     },
     metadata: {
       userCount: sanitizedUsers.length,
@@ -690,6 +716,8 @@ export function validateBackup(
       exerciseCount: healedExercises.length,
       workoutSessionCount: workoutSessions.length,
       setCount: sets.length,
+      skipCount: skips.length,
+      fitnessAlternativeCount: fitnessAlternatives.length,
     },
   };
 
@@ -789,6 +817,8 @@ export async function restoreBackup(
       dbInstance.sets,
       dbInstance.syncQueue,
       dbInstance.syncMeta,
+      dbInstance.skips,
+      dbInstance.fitnessAlternatives,
     ],
     async () => {
       if (strategy === "replace") {
@@ -811,6 +841,8 @@ export async function restoreBackup(
           dbInstance.sets.clear(),
           dbInstance.syncQueue.clear(), // Reset outbox: Stale mutations are never blindly replayed
           dbInstance.syncMeta.clear(),  // Reset sync cursor: Clean sync baseline
+          dbInstance.skips.clear(),
+          dbInstance.fitnessAlternatives.clear(),
         ]);
 
         // Reconstruct user records with preserved or safe default PIN hashes
@@ -831,6 +863,12 @@ export async function restoreBackup(
           dbInstance.exercises.bulkAdd(backup.data.exercises),
           dbInstance.workoutSessions.bulkAdd(backup.data.workoutSessions),
           dbInstance.sets.bulkAdd(backup.data.sets),
+          backup.data.skips && backup.data.skips.length > 0
+            ? dbInstance.skips.bulkAdd(backup.data.skips)
+            : Promise.resolve(),
+          backup.data.fitnessAlternatives && backup.data.fitnessAlternatives.length > 0
+            ? dbInstance.fitnessAlternatives.bulkAdd(backup.data.fitnessAlternatives)
+            : Promise.resolve(),
         ]);
 
         result.restored = {
@@ -851,6 +889,8 @@ export async function restoreBackup(
           existingExerciseKeys,
           existingSessionKeys,
           existingSetKeys,
+          existingSkipKeys,
+          existingAltKeys,
         ] = await Promise.all([
           dbInstance.users.toCollection().primaryKeys(),
           dbInstance.routines.toCollection().primaryKeys(),
@@ -858,6 +898,8 @@ export async function restoreBackup(
           dbInstance.exercises.toCollection().primaryKeys(),
           dbInstance.workoutSessions.toCollection().primaryKeys(),
           dbInstance.sets.toCollection().primaryKeys(),
+          dbInstance.skips.toCollection().primaryKeys(),
+          dbInstance.fitnessAlternatives.toCollection().primaryKeys(),
         ]);
 
         const userKeySet = new Set(existingUserKeys as string[]);
@@ -866,6 +908,8 @@ export async function restoreBackup(
         const exerciseKeySet = new Set(existingExerciseKeys as string[]);
         const sessionKeySet = new Set(existingSessionKeys as string[]);
         const setKeySet = new Set(existingSetKeys as string[]);
+        const skipKeySet = new Set(existingSkipKeys as string[]);
+        const altKeySet = new Set(existingAltKeys as string[]);
 
         // Filter out colliding records
         const newUsers = backup.data.users.filter((u) => !userKeySet.has(u.id));
@@ -876,6 +920,8 @@ export async function restoreBackup(
         const newExercises = backup.data.exercises.filter((ex) => !exerciseKeySet.has(ex.id));
         const newSessions = backup.data.workoutSessions.filter((s) => !sessionKeySet.has(s.id));
         const newSets = backup.data.sets.filter((set) => !setKeySet.has(set.id));
+        const newSkips = (backup.data.skips || []).filter((sk) => !skipKeySet.has(sk.id));
+        const newAlts = (backup.data.fitnessAlternatives || []).filter((alt) => !altKeySet.has(alt.id));
 
         const usersToInsert = newUsers.map((safeUser) => ({
           ...safeUser,
@@ -889,6 +935,8 @@ export async function restoreBackup(
         if (newExercises.length > 0) await dbInstance.exercises.bulkAdd(newExercises);
         if (newSessions.length > 0) await dbInstance.workoutSessions.bulkAdd(newSessions);
         if (newSets.length > 0) await dbInstance.sets.bulkAdd(newSets);
+        if (newSkips.length > 0) await dbInstance.skips.bulkAdd(newSkips);
+        if (newAlts.length > 0) await dbInstance.fitnessAlternatives.bulkAdd(newAlts);
 
         result.restored = {
           users: usersToInsert.length,

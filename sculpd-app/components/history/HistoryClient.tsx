@@ -59,7 +59,7 @@ export default function HistoryClient() {
   const workouts = completedWorkouts || [];
 
   return (
-    <main className="min-h-screen bg-[#fafaf8] text-zinc-900 p-4 font-sans flex flex-col justify-between pb-12 max-w-md mx-auto w-full">
+    <main className="min-h-screen bg-[#fafaf8] text-zinc-900 p-4 font-sans flex flex-col justify-between pb-12 max-w-md mx-auto w-full overflow-x-hidden">
       {/* Upper Section */}
       <div>
         <UserBar />
@@ -75,14 +75,23 @@ export default function HistoryClient() {
               <span>←</span>
               <span>Dashboard</span>
             </Link>
-            <Link
-              href="/analytics"
-              className="text-stone-400 hover:text-zinc-900 uppercase font-bold flex items-center gap-1 transition-colors p-1 -m-1"
-              title="View Training Analytics"
-            >
-              <span>Analytics</span>
-              <span>→</span>
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/progression"
+                className="text-stone-400 hover:text-zinc-900 uppercase font-bold flex items-center gap-1 transition-colors p-1 -m-1"
+                title="View Ranks & Achievements"
+              >
+                <span>Ranks</span>
+              </Link>
+              <Link
+                href="/analytics"
+                className="text-stone-400 hover:text-zinc-900 uppercase font-bold flex items-center gap-1 transition-colors p-1 -m-1"
+                title="View Training Analytics"
+              >
+                <span>Analytics</span>
+                <span>→</span>
+              </Link>
+            </div>
           </div>
 
           <div className="flex items-baseline justify-between">

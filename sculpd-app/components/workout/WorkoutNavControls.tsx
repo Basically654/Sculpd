@@ -29,7 +29,7 @@ export default function WorkoutNavControls({
   return (
     <div className="space-y-3 pt-2">
       {/* Exercise Pill Jump Bar */}
-      <div className="flex items-center justify-center gap-1.5 overflow-x-auto py-1">
+      <div className="flex items-center justify-center gap-1.5 overflow-x-auto py-1 max-w-full no-scrollbar overscroll-x-contain touch-pan-x">
         {exercises.map((ex, idx) => {
           const isActive = idx === currentIndex;
           return (
