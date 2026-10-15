@@ -238,19 +238,46 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
     }
   };
 
+  const [isRestMinimized, setIsRestMinimized] = React.useState(false);
+
+  // If timer stops or finishes, restore default state
+  React.useEffect(() => {
+    if (!timer.isActive) {
+      setIsRestMinimized(false);
+    }
+  }, [timer.isActive]);
+
+  const isFinalSet =
+    targetSetsCount !== null && currentExerciseSets.length >= targetSetsCount;
+  const nextExercise =
+    currentExerciseIndex + 1 < exercises.length
+      ? exercises[currentExerciseIndex + 1]
+      : null;
+
   // DOMINANT REST STATE
-  // Sculp'd disappears and timer becomes dominant while resting
-  if (timer.isActive) {
+  // Sculp'd disappears and timer becomes dominant while resting, unless minimized in Dev Mode to scroll workout
+  if (timer.isActive && !isRestMinimized) {
     return (
-      <main className="min-h-screen bg-[#fafaf8] text-zinc-900 p-4 max-w-md mx-auto w-full font-sans flex flex-col justify-between select-none">
+      <main className="h-full w-full overflow-y-auto bg-[#fafaf8] text-zinc-900 p-4 max-w-md mx-auto font-sans flex flex-col justify-between select-none">
         <DominantRestView
           exercise={currentExercise}
           lastLoggedSet={lastLoggedSet}
           nextSetNumber={currentSetNumber}
           totalSetsTarget={targetSetsCount || 0}
+          isFinalSet={isFinalSet}
+          nextExercise={nextExercise}
           onSkipRest={timer.skip}
           onDeleteLastSet={deleteLastSet}
           onFinishWorkout={handleFinishWorkout}
+          onToggleMinimize={() => setIsRestMinimized(true)}
+          onGoToNextExercise={
+            nextExercise
+              ? () => {
+                  timer.skip();
+                  goToNextExercise();
+                }
+              : undefined
+          }
         />
 
         {/* PR Overlay if hit on that set */}
@@ -260,7 +287,78 @@ export default function WorkoutScreen({ routineSlug }: WorkoutScreenProps) {
   }
 
   return (
-    <main className="min-h-screen bg-[#fafaf8] text-zinc-900 p-4 pb-8 max-w-md mx-auto w-full font-sans flex flex-col justify-between select-none">
+    <main className="h-full w-full overflow-y-auto bg-[#fafaf8] text-zinc-900 p-4 pb-12 max-w-md mx-auto font-sans flex flex-col justify-between select-none">
+      {/* Floating Developer Rest Timer Bar when Minimized */}
+      {timer.isActive && isRestMinimized && (
+        <aside
+          aria-label="Rest timer minimized"
+          className="sticky top-0 z-30 mb-3 w-full shadow-lg pointer-events-auto animate-in slide-in-from-top duration-200"
+        >
+          <div className="flex flex-col gap-2 p-3 rounded-2xl border border-amber-500/50 bg-zinc-950/95 backdrop-blur-md text-white shadow-xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-300">
+                  Rest: {Math.floor(timer.remaining / 60)}:{(timer.remaining % 60).toString().padStart(2, "0")}
+                </span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800 font-mono">
+                  SCROLLING ON
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsRestMinimized(false)}
+                className="text-[11px] font-mono text-stone-200 hover:text-white px-2 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 active:scale-95 transition-all cursor-pointer font-semibold"
+              >
+                ⬆️ Expand Timer
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-zinc-800/80">
+              <div className="flex items-center gap-1 font-mono text-xs">
+                <button
+                  type="button"
+                  onClick={() => timer.accelerateTimer(5)}
+                  className="px-2 py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 text-amber-300 border border-amber-600/30 text-[11px] cursor-pointer"
+                >
+                  5s Left
+                </button>
+                <button
+                  type="button"
+                  onClick={() => timer.accelerateTimer(10)}
+                  className="px-2 py-1 rounded-md bg-zinc-900 hover:bg-zinc-800 text-amber-300 border border-amber-600/30 text-[11px] cursor-pointer"
+                >
+                  10s Left
+                </button>
+                <button
+                  type="button"
+                  onClick={timer.completeTimerNow}
+                  className="px-2.5 py-1 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-[11px] cursor-pointer"
+                >
+                  Done
+                </button>
+              </div>
+              <div className="flex items-center gap-1 font-mono">
+                <button
+                  type="button"
+                  onClick={() => timer.addTime(30)}
+                  className="px-2 py-1 rounded-md bg-zinc-900 text-stone-300 hover:text-white text-[11px] border border-zinc-800 cursor-pointer"
+                >
+                  +30s
+                </button>
+                <button
+                  type="button"
+                  onClick={timer.skip}
+                  className="px-2 py-1 rounded-md bg-white text-zinc-950 text-[11px] font-bold cursor-pointer"
+                >
+                  Ready
+                </button>
+              </div>
+            </div>
+          </div>
+        </aside>
+      )}
+
       {/* Upper Context Header */}
       <div>
         <header className="flex items-center justify-between pb-3 border-b border-stone-200/80 text-xs font-mono">

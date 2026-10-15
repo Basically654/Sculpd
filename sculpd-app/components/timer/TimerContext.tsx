@@ -21,6 +21,7 @@ import {
   RestTimerState,
 } from "@/lib/notifications/rest-notifier";
 import { useUser } from "@/components/auth/UserContext";
+import { logTimerTelemetry } from "@/lib/telemetry/telemetry-service";
 
 export const STORAGE_REST_TIMER_STATE = "sculpd_rest_timer_state";
 export const STORAGE_END_KEY = "sculpd_rest_timer_end";
@@ -47,6 +48,8 @@ export type TimerContextValue = {
   stop: () => void;
   skip: () => void;
   addTime: (seconds: number) => void;
+  accelerateTimer: (remainingSeconds: number) => void;
+  completeTimerNow: () => void;
   resetCompleted: () => void;
 };
 
@@ -279,6 +282,78 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
     [isActive, exerciseName, nextSetNumber, workoutUrl, totalDuration]
   );
 
+  const accelerateTimer = useCallback(
+    (seconds: number) => {
+      if (!isActive || !endTimeRef.current) return;
+      const targetSec = Math.max(1, seconds);
+      const newTargetMs = Date.now() + targetSec * 1000;
+      endTimeRef.current = newTargetMs;
+      setRemaining(targetSec);
+
+      const currentId = timerIdRef.current || `rest_accel_${Date.now()}`;
+      if (typeof window !== "undefined") {
+        const existingStr = localStorage.getItem(STORAGE_REST_TIMER_STATE);
+        let updatedState: RestTimerState;
+        if (existingStr) {
+          try {
+            const parsed = JSON.parse(existingStr);
+            updatedState = {
+              ...parsed,
+              restEndsAt: newTargetMs,
+            };
+          } catch {
+            updatedState = {
+              id: currentId,
+              restStartedAt: startedTimeRef.current || Date.now(),
+              restEndsAt: newTargetMs,
+              totalDuration,
+              exerciseName,
+              nextSetNumber,
+              workoutUrl,
+              status: "running",
+            };
+          }
+        } else {
+          updatedState = {
+            id: currentId,
+            restStartedAt: startedTimeRef.current || Date.now(),
+            restEndsAt: newTargetMs,
+            totalDuration,
+            exerciseName,
+            nextSetNumber,
+            workoutUrl,
+            status: "running",
+          };
+        }
+
+        localStorage.setItem(STORAGE_REST_TIMER_STATE, JSON.stringify(updatedState));
+        localStorage.setItem(STORAGE_END_KEY, String(newTargetMs));
+
+        scheduleRestNotification(
+          updatedState,
+          undefined,
+          undefined,
+          sessionTokenRef.current
+        ).catch(() => {});
+      }
+
+      logTimerTelemetry("shortened", currentId, {
+        newRemaining: targetSec,
+        isAccelerated: true,
+      });
+    },
+    [isActive, totalDuration, exerciseName, nextSetNumber, workoutUrl]
+  );
+
+  const completeTimerNow = useCallback(() => {
+    if (!isActive) return;
+    const currentId = timerIdRef.current || "unknown";
+    stop();
+    setIsCompleted(true);
+    playRestCompleteChime();
+    logTimerTelemetry("completed", currentId, { accelerated: true });
+  }, [isActive, stop]);
+
   // Restore active timer from localStorage on mount (survives tab closing / refresh)
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -398,6 +473,8 @@ export const TimerProvider = ({ children }: { children: React.ReactNode }) => {
         stop,
         skip,
         addTime,
+        accelerateTimer,
+        completeTimerNow,
         resetCompleted,
       }}
     >

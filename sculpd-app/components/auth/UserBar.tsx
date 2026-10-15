@@ -2,7 +2,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useUser } from "./UserContext";
+import { useDev } from "@/components/dev/DevContext";
 import { useSync } from "@/lib/sync/use-sync";
 import { AvatarColor } from "@/types/models";
 import {
@@ -28,6 +30,7 @@ const BADGE_COLOR_MAP: Record<AvatarColor, { border: string; bg: string; text: s
 export default function UserBar() {
   const { activeUserId, activeUser, sessionToken, switchUser, updateBodyweight } = useUser();
   const { syncState, pendingCount, triggerSync } = useSync(activeUserId, sessionToken);
+  const { isDevModeActive, logoutDev } = useDev();
 
   const [hasPushSupport, setHasPushSupport] = useState<boolean>(false);
   const [isPushActive, setIsPushActive] = useState<boolean>(false);
@@ -217,6 +220,27 @@ export default function UserBar() {
           >
             <span>{isPushActive ? "🔔 Alerts on" : "🔕 Alerts off"}</span>
           </button>
+        )}
+
+        {isDevModeActive && (
+          <div className="flex items-center gap-1">
+            <Link
+              href="/dev"
+              className="text-xs font-mono font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg px-2 py-1 shadow-xs transition-colors cursor-pointer flex items-center gap-1"
+              title="Open Developer Console"
+            >
+              <span>🛠️</span>
+              <span>DEV</span>
+            </Link>
+            <button
+              type="button"
+              onClick={logoutDev}
+              className="text-[10px] font-mono text-stone-500 hover:text-stone-800 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-lg px-1.5 py-1 transition-colors cursor-pointer"
+              title="Exit Developer Mode"
+            >
+              Exit
+            </button>
+          </div>
         )}
 
         <button

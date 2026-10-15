@@ -156,11 +156,27 @@ export async function getSessionPRs(
 
     // Sets logged prior to this workout session
     const sessionStartTime = new Date(session.startedAt).getTime();
-    const priorHistorical = allHistorical.filter(
-      (s) =>
-        s.workoutSessionId !== session.id &&
-        new Date(s.createdAt).getTime() < sessionStartTime
+    const otherSets = allHistorical.filter((s) => s.workoutSessionId !== session.id);
+    const priorHistorical: WorkoutSet[] = [];
+
+    // Pre-cache parent session dates to resolve prior historical sets in chronological order
+    const parentSessionIds = Array.from(new Set(otherSets.map((s) => s.workoutSessionId)));
+    const parentSessions = await Promise.all(
+      parentSessionIds.map((sid) => db.workoutSessions.get(sid))
     );
+    const sessionTimeMap = new Map<string, number>();
+    for (const ps of parentSessions) {
+      if (ps) {
+        sessionTimeMap.set(ps.id, new Date(ps.startedAt).getTime());
+      }
+    }
+
+    for (const s of otherSets) {
+      const setTime = sessionTimeMap.get(s.workoutSessionId) ?? new Date(s.createdAt).getTime();
+      if (setTime < sessionStartTime) {
+        priorHistorical.push(s);
+      }
+    }
 
     const exerciseName =
       exerciseNames?.get(exId) ||

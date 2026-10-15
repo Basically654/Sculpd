@@ -4,17 +4,23 @@
 import React from "react";
 import { WorkoutSet, Exercise } from "@/types/models";
 import { useTimer } from "@/components/timer/TimerContext";
+import { useDev } from "@/components/dev/DevContext";
 
 import { formatSetSummary, isBodyweightExercise } from "@/lib/load/load-utils";
+import NextExercisePreview from "./NextExercisePreview";
 
 interface DominantRestViewProps {
   exercise: Exercise;
   lastLoggedSet?: WorkoutSet;
   nextSetNumber: number;
   totalSetsTarget: number;
+  isFinalSet?: boolean;
+  nextExercise?: Exercise | null;
   onSkipRest: () => void;
   onDeleteLastSet?: () => Promise<any>;
   onFinishWorkout?: () => void;
+  onGoToNextExercise?: () => void;
+  onToggleMinimize?: () => void;
 }
 
 export default function DominantRestView({
@@ -22,11 +28,24 @@ export default function DominantRestView({
   lastLoggedSet,
   nextSetNumber,
   totalSetsTarget,
+  isFinalSet,
+  nextExercise,
   onSkipRest,
   onDeleteLastSet,
   onFinishWorkout,
+  onGoToNextExercise,
+  onToggleMinimize,
 }: DominantRestViewProps) {
-  const { remaining, totalDuration, addTime } = useTimer();
+  const { remaining, totalDuration, addTime, accelerateTimer, completeTimerNow } = useTimer();
+
+  let isDevModeActive = false;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const devCtx = useDev();
+    isDevModeActive = devCtx.isDevModeActive;
+  } catch {
+    isDevModeActive = false;
+  }
 
   const mins = Math.floor(remaining / 60);
   const secs = remaining % 60;
@@ -38,9 +57,12 @@ export default function DominantRestView({
       : 0;
 
   const isBW = isBodyweightExercise(exercise);
+  const isFinal =
+    isFinalSet ?? (totalSetsTarget > 0 && nextSetNumber > totalSetsTarget);
 
   return (
-    <div className="fixed inset-0 z-40 bg-zinc-950 text-white flex flex-col justify-between items-center text-center p-6 select-none animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-40 bg-zinc-950 text-white overflow-y-auto select-none animate-in fade-in duration-200">
+      <div className="min-h-full flex flex-col justify-between items-center text-center p-6 py-8">
       {/* Top: Exercise context & completed set confirmation */}
       <div className="pt-6 space-y-2 w-full max-w-sm">
         <h2 className="text-sm font-bold uppercase tracking-wider text-stone-400">
@@ -76,18 +98,76 @@ export default function DominantRestView({
           />
         </div>
 
-        {/* Next set indicator */}
-        <div className="text-sm font-mono text-stone-300 pt-2 font-medium">
-          {totalSetsTarget > 0
-            ? nextSetNumber <= totalSetsTarget
-              ? `Next: Set ${nextSetNumber} of ${totalSetsTarget}`
-              : `Next: Set ${nextSetNumber} (Extra)`
-            : `Next: Set ${nextSetNumber}`}
-        </div>
+        {/* Next set indicator or Next Exercise Preview */}
+        {isFinal && nextExercise ? (
+          <NextExercisePreview
+            nextExercise={nextExercise}
+            onGoToNextExercise={onGoToNextExercise}
+          />
+        ) : isFinal && !nextExercise ? (
+          <div className="text-sm font-mono text-emerald-400 pt-2 font-medium">
+            ✓ Final Exercise Complete
+          </div>
+        ) : (
+          <div className="text-sm font-mono text-stone-300 pt-2 font-medium">
+            {totalSetsTarget > 0
+              ? nextSetNumber <= totalSetsTarget
+                ? `Next: Set ${nextSetNumber} of ${totalSetsTarget}`
+                : `Next: Set ${nextSetNumber} (Extra)`
+              : `Next: Set ${nextSetNumber}`}
+          </div>
+        )}
       </div>
 
       {/* Bottom: Timer Controls */}
       <div className="w-full max-w-xs pb-6 space-y-3">
+        {isDevModeActive && (
+          <div className="p-2 rounded-xl bg-amber-950/40 border border-amber-600/40 text-amber-300 space-y-1.5 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider font-bold">
+              <span>⚡ Dev Timer Controls</span>
+              <span className="text-[9px] px-1 py-0.5 rounded bg-amber-900/60 text-amber-200 border border-amber-700/50">
+                DEV
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5 text-xs font-mono font-bold">
+              <button
+                type="button"
+                onClick={() => accelerateTimer(5)}
+                className="py-1.5 px-2 rounded-lg bg-zinc-900 hover:bg-zinc-850 text-amber-200 border border-amber-600/30 transition-all active:scale-95 cursor-pointer text-center"
+                title="Accelerate timer to 5s remaining"
+              >
+                5s Left
+              </button>
+              <button
+                type="button"
+                onClick={() => accelerateTimer(10)}
+                className="py-1.5 px-2 rounded-lg bg-zinc-900 hover:bg-zinc-850 text-amber-200 border border-amber-600/30 transition-all active:scale-95 cursor-pointer text-center"
+                title="Accelerate timer to 10s remaining"
+              >
+                10s Left
+              </button>
+              <button
+                type="button"
+                onClick={completeTimerNow}
+                className="py-1.5 px-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 border border-amber-400 transition-all active:scale-95 cursor-pointer text-center"
+                title="Trigger immediate timer completion"
+              >
+                Done
+              </button>
+            </div>
+            {onToggleMinimize && (
+              <button
+                type="button"
+                onClick={onToggleMinimize}
+                className="w-full mt-1.5 py-1.5 px-2 rounded-lg bg-zinc-900 hover:bg-zinc-850 text-amber-300 border border-amber-600/30 text-[11px] font-mono font-semibold transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+                title="Minimize timer to floating bar so you can scroll through the entire workout screen"
+              >
+                <span>📜 Allow Scrolling / View Workout</span>
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
@@ -125,6 +205,7 @@ export default function DominantRestView({
             Finish Workout
           </button>
         )}
+      </div>
       </div>
     </div>
   );

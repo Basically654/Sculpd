@@ -4,6 +4,7 @@ import "./globals.css";
 import { TimerProvider } from "@/components/timer/TimerContext";
 import RestTimerBar from "@/components/timer/RestTimerBar";
 import { UserProvider } from "@/components/auth/UserContext";
+import { DevProvider } from "@/components/dev/DevContext";
 
 // 1. Mobile viewport settings optimized for gym-floor interaction
 export const viewport: Viewport = {
@@ -58,12 +59,14 @@ export default function RootLayout({
       className="h-full bg-[#fafaf8] text-zinc-900 antialiased overflow-hidden select-none"
     >
       <body className="h-full w-full overflow-y-auto bg-[#fafaf8] text-zinc-900">
-        <UserProvider>
-          <TimerProvider>
-            {children}
-            <RestTimerBar />
-          </TimerProvider>
-        </UserProvider>
+        <DevProvider>
+          <UserProvider>
+            <TimerProvider>
+              {children}
+              <RestTimerBar />
+            </TimerProvider>
+          </UserProvider>
+        </DevProvider>
       </body>
     </html>
   );

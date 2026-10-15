@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { SafeUser, AvatarColor } from "@/types/models";
 import { useUser } from "./UserContext";
 import PinPadModal from "./PinPadModal";
@@ -163,17 +164,27 @@ export default function WhoIsTrainingView() {
       </div>
 
       {/* Footer */}
-      <footer className="text-center pt-4 pb-2">
+      <footer className="text-center pt-4 pb-2 space-y-1">
         <p className="text-[10px] font-mono tracking-widest text-stone-400 uppercase">
           Sculp’d • Local-First Architecture
         </p>
-        <button
-          type="button"
-          onClick={() => setIsBackupModalOpen(true)}
-          className="mt-1 text-[11px] font-medium text-stone-400 hover:text-stone-700 transition-colors cursor-pointer"
-        >
-          Backup & Restore
-        </button>
+        <div className="flex items-center justify-center gap-3 text-[11px] font-medium text-stone-400">
+          <button
+            type="button"
+            onClick={() => setIsBackupModalOpen(true)}
+            className="hover:text-stone-700 transition-colors cursor-pointer"
+          >
+            Backup & Restore
+          </button>
+          <span>•</span>
+          <Link
+            href="/dev"
+            className="hover:text-amber-700 transition-colors cursor-pointer flex items-center gap-1 font-mono text-[10px]"
+          >
+            <span>🛠️</span>
+            <span>Developer Mode</span>
+          </Link>
+        </div>
       </footer>
 
       {/* PIN Pad Modal */}

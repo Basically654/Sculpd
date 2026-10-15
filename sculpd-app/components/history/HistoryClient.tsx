@@ -13,10 +13,14 @@ import {
 } from "@/lib/history/history-service";
 import { getActiveWorkoutSession, deleteWorkoutSession } from "@/lib/db/workout-repository";
 import DeleteWorkoutModal from "./DeleteWorkoutModal";
+import WorkoutCalendar from "@/components/calendar/WorkoutCalendar";
+import EditSessionDateModal from "@/components/calendar/EditSessionDateModal";
 
 export default function HistoryClient() {
   const { activeUserId, isLoading: isAuthLoading } = useUser();
+  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [workoutToDelete, setWorkoutToDelete] = useState<CompletedWorkoutSummary | null>(null);
+  const [sessionToEditDate, setSessionToEditDate] = useState<CompletedWorkoutSummary | null>(null);
 
   // 1. Live Query: Retrieve all completed workout summaries
   const completedWorkouts = useLiveQuery(
@@ -61,7 +65,7 @@ export default function HistoryClient() {
         <UserBar />
 
         {/* Header with Back button to Dashboard */}
-        <header className="pt-2 pb-4">
+        <header className="pt-2 pb-3">
           <div className="flex items-center justify-between mb-2 text-xs font-mono">
             <Link
               href="/"
@@ -90,13 +94,41 @@ export default function HistoryClient() {
             </span>
           </div>
           <p className="text-xs text-stone-500 font-medium tracking-wide mt-0.5">
-            Completed Gym-Floor Sessions
+            Training Calendar & Completed Sessions
           </p>
         </header>
 
+        {/* View Toggle: Calendar vs List */}
+        <div className="flex rounded-2xl bg-stone-200/60 p-1 mb-4 shadow-2xs">
+          <button
+            type="button"
+            onClick={() => setViewMode("calendar")}
+            className={`flex-1 py-1.5 rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+              viewMode === "calendar"
+                ? "bg-white text-zinc-900 shadow-xs"
+                : "text-stone-500 hover:text-zinc-800"
+            }`}
+          >
+            <span>📅</span>
+            <span>Calendar</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("list")}
+            className={`flex-1 py-1.5 rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+              viewMode === "list"
+                ? "bg-white text-zinc-900 shadow-xs"
+                : "text-stone-500 hover:text-zinc-800"
+            }`}
+          >
+            <span>📋</span>
+            <span>List</span>
+          </button>
+        </div>
+
         {/* In-Progress Session Distinct Callout (Excluded from completed history) */}
         {activeSession && (
-          <div className="mb-5 p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200/80 shadow-xs">
+          <div className="mb-4 p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200/80 shadow-xs">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-amber-600 animate-pulse" />
@@ -118,8 +150,10 @@ export default function HistoryClient() {
           </div>
         )}
 
-        {/* Completed Workouts List or Empty State */}
-        {workouts.length === 0 ? (
+        {/* Calendar View vs List View */}
+        {viewMode === "calendar" ? (
+          <WorkoutCalendar userId={activeUserId} />
+        ) : workouts.length === 0 ? (
           <div className="py-12 p-8 rounded-2xl border border-dashed border-stone-300 bg-white/60 text-center flex flex-col items-center justify-center space-y-3 shadow-xs my-6">
             <div className="w-12 h-12 rounded-2xl bg-stone-100 border border-stone-200 flex items-center justify-center text-stone-400 text-lg">
               <svg
@@ -169,6 +203,36 @@ export default function HistoryClient() {
                     <span className="text-xs font-mono text-stone-500 pt-0.5">
                       {workout.formattedDate}
                     </span>
+
+                    {/* Edit Date Action */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setSessionToEditDate(workout);
+                      }}
+                      className="p-1 rounded-lg text-stone-400 hover:text-zinc-900 hover:bg-stone-100 transition-colors cursor-pointer"
+                      title="Correct or backfill workout date"
+                      aria-label={`Correct date for workout on ${workout.formattedDate}`}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={1.75}
+                        stroke="currentColor"
+                        className="w-4 h-4"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"
+                        />
+                      </svg>
+                    </button>
+
+                    {/* Delete Workout Action */}
                     <button
                       type="button"
                       onClick={(e) => {
@@ -233,6 +297,16 @@ export default function HistoryClient() {
           Sculp’d • Immutable Workout History
         </p>
       </footer>
+
+      {/* Edit Session Date Modal */}
+      {sessionToEditDate && (
+        <EditSessionDateModal
+          isOpen={Boolean(sessionToEditDate)}
+          userId={activeUserId}
+          session={sessionToEditDate}
+          onClose={() => setSessionToEditDate(null)}
+        />
+      )}
 
       {/* Delete Confirmation Modal */}
       {workoutToDelete && (
