@@ -14,10 +14,19 @@ import {
   getActiveWorkoutSession,
   cancelWorkoutSession,
 } from "@/lib/db/workout-repository";
+import ExportWorkoutModal from "@/components/workout/ExportWorkoutModal";
+import ImportWorkoutModal from "@/components/workout/ImportWorkoutModal";
 
 export default function DashboardClient() {
   const { activeUserId, isLoading: isAuthLoading } = useUser();
   const [isDiscarding, setIsDiscarding] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isExportAllModalOpen, setIsExportAllModalOpen] = useState(false);
+  const [selectedRoutineForExport, setSelectedRoutineForExport] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   // Seed standard exercise library on mount outside liveQuery
   useEffect(() => {
@@ -123,13 +132,25 @@ export default function DashboardClient() {
               </p>
             </div>
 
-            <Link
-              href="/workout/new"
-              className="h-9 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-xs tracking-wider flex items-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer shrink-0"
-            >
-              <span>+</span>
-              <span>New</span>
-            </Link>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsImportModalOpen(true)}
+                className="h-9 px-2.5 sm:px-3 rounded-xl bg-white hover:bg-stone-100 border border-stone-200/90 text-zinc-800 font-medium text-xs tracking-wider flex items-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer shrink-0"
+                title="Import Workout from file or code"
+              >
+                <span>📥</span>
+                <span>Import</span>
+              </button>
+
+              <Link
+                href="/workout/new"
+                className="h-9 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-xs tracking-wider flex items-center gap-1.5 shadow-2xs transition-all active:scale-95 cursor-pointer shrink-0"
+              >
+                <span>+</span>
+                <span>New</span>
+              </Link>
+            </div>
           </div>
 
           {/* Clean responsive navigation pill bar */}
@@ -257,12 +278,22 @@ export default function DashboardClient() {
                 Build your custom workout routines to get started on the gym floor.
               </p>
             </div>
-            <Link
-              href="/workout/new"
-              className="mt-2 px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-xs cursor-pointer active:scale-95"
-            >
-              + Create Workout
-            </Link>
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
+              <Link
+                href="/workout/new"
+                className="px-4 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-xs cursor-pointer active:scale-95"
+              >
+                + Create Workout
+              </Link>
+              <button
+                type="button"
+                onClick={() => setIsImportModalOpen(true)}
+                className="px-4 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 border border-stone-200 text-zinc-800 font-bold text-xs uppercase tracking-wider transition-all shadow-2xs cursor-pointer active:scale-95 flex items-center gap-1.5"
+              >
+                <span>📥</span>
+                <span>Import Workout</span>
+              </button>
+            </div>
           </div>
         ) : (
           <div className="space-y-3">
@@ -297,7 +328,33 @@ export default function DashboardClient() {
                     </p>
                   </Link>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedRoutineForExport({ id: routine.id, name: routine.name });
+                        setIsExportModalOpen(true);
+                      }}
+                      className="h-8 px-2 rounded-lg bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-600 hover:text-zinc-900 text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                      title={`Share / Export ${routine.name}`}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2}
+                        stroke="currentColor"
+                        className="w-3.5 h-3.5 text-stone-500"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z"
+                        />
+                      </svg>
+                      <span className="hidden xs:inline">Share</span>
+                    </button>
                     <Link
                       href={`/workout/edit/${routine.id}`}
                       className="h-8 px-2.5 rounded-lg bg-stone-50 hover:bg-stone-100 border border-stone-200 text-stone-600 hover:text-zinc-900 text-xs font-medium flex items-center transition-colors"
@@ -315,6 +372,19 @@ export default function DashboardClient() {
                 </div>
               );
             })}
+
+            {userRoutinesWithCounts.length > 1 && (
+              <div className="pt-2 text-center">
+                <button
+                  type="button"
+                  onClick={() => setIsExportAllModalOpen(true)}
+                  className="text-xs font-mono text-stone-500 hover:text-zinc-900 inline-flex items-center gap-1.5 transition-colors cursor-pointer p-1"
+                >
+                  <span>📦</span>
+                  <span>Export all {userRoutinesWithCounts.length} workouts as a bundle</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -325,6 +395,32 @@ export default function DashboardClient() {
           Sculp’d • High-Efficiency Architecture
         </p>
       </footer>
+
+      {/* Import Workout Modal */}
+      <ImportWorkoutModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+      />
+
+      {/* Export Single Workout Modal */}
+      <ExportWorkoutModal
+        isOpen={isExportModalOpen}
+        onClose={() => {
+          setIsExportModalOpen(false);
+          setSelectedRoutineForExport(null);
+        }}
+        routineId={selectedRoutineForExport?.id}
+        routineName={selectedRoutineForExport?.name}
+        userId={activeUserId}
+      />
+
+      {/* Export All Workouts Bundle Modal */}
+      <ExportWorkoutModal
+        isOpen={isExportAllModalOpen}
+        onClose={() => setIsExportAllModalOpen(false)}
+        isBundle={true}
+        userId={activeUserId}
+      />
     </main>
   );
 }

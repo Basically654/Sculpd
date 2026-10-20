@@ -25,7 +25,8 @@
     "test:dev": "tsx test/developer-mode.test.ts",
     "test:workout-access": "tsx test/workout-access-and-edit.test.ts",
     "test:progression": "tsx test/achievements-ranks-accountability.test.ts",
-    "test": "tsx test/phase2-identity-isolation.test.ts && tsx test/phase3-sync-engine.test.ts && tsx test/phase4-gym-floor-workout.test.ts && tsx test/phase5-workout-overhaul.test.ts && tsx test/pr-detection.test.ts && tsx test/rest-timer-notifications.test.ts && tsx test/bodyweight-exercises.test.ts && tsx test/webkit-transaction-resilience.test.ts && tsx test/multi-set-clarity.test.ts && tsx test/workout-history.test.ts && tsx test/training-analytics.test.ts && tsx test/local-backup-restore.test.ts && tsx test/cloud-sync-integrity.test.ts && tsx test/workout-calendar-backfill.test.ts && tsx test/next-exercise-during-rest.test.ts && tsx test/developer-mode.test.ts && tsx test/workout-access-and-edit.test.ts && tsx test/achievements-ranks-accountability.test.ts"
+    "test:transfer": "tsx test/workout-import-export.test.ts",
+    "test": "tsx test/phase2-identity-isolation.test.ts && tsx test/phase3-sync-engine.test.ts && tsx test/phase4-gym-floor-workout.test.ts && tsx test/phase5-workout-overhaul.test.ts && tsx test/pr-detection.test.ts && tsx test/rest-timer-notifications.test.ts && tsx test/bodyweight-exercises.test.ts && tsx test/webkit-transaction-resilience.test.ts && tsx test/multi-set-clarity.test.ts && tsx test/workout-history.test.ts && tsx test/training-analytics.test.ts && tsx test/local-backup-restore.test.ts && tsx test/cloud-sync-integrity.test.ts && tsx test/workout-calendar-backfill.test.ts && tsx test/next-exercise-during-rest.test.ts && tsx test/developer-mode.test.ts && tsx test/workout-access-and-edit.test.ts && tsx test/achievements-ranks-accountability.test.ts && tsx test/workout-import-export.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.0",

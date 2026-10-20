@@ -15,6 +15,8 @@ import {
 import ExercisePickerModal from "./ExercisePickerModal";
 import ExerciseConfigRow, { ConfiguredExerciseItem } from "./ExerciseConfigRow";
 import { pushPendingMutations } from "@/lib/sync/sync-client";
+import ExportWorkoutModal from "@/components/workout/ExportWorkoutModal";
+import ImportWorkoutModal from "@/components/workout/ImportWorkoutModal";
 
 interface WorkoutBuilderProps {
   routineId?: string;
@@ -29,6 +31,8 @@ export default function WorkoutBuilder({ routineId }: WorkoutBuilderProps) {
   const [description, setDescription] = useState("");
   const [exercises, setExercises] = useState<ConfiguredExerciseItem[]>([]);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(Boolean(routineId));
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -265,16 +269,39 @@ export default function WorkoutBuilder({ routineId }: WorkoutBuilderProps) {
             {routineId ? "Edit Workout" : "New Workout"}
           </h1>
 
-          {routineId && (
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="text-xs font-mono uppercase text-red-600 hover:text-red-700 font-semibold transition-colors cursor-pointer"
-            >
-              {isDeleting ? "Deleting..." : "Delete"}
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {routineId ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsExportModalOpen(true)}
+                  className="text-xs font-mono uppercase text-stone-600 hover:text-zinc-900 font-semibold transition-colors cursor-pointer flex items-center gap-1 px-2 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 border border-stone-200/80"
+                  title="Share or export this workout"
+                >
+                  <span>📤</span>
+                  <span>Share</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="text-xs font-mono uppercase text-red-600 hover:text-red-700 font-semibold transition-colors cursor-pointer"
+                >
+                  {isDeleting ? "Deleting..." : "Delete"}
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsImportModalOpen(true)}
+                className="text-xs font-mono uppercase text-stone-600 hover:text-zinc-900 font-semibold transition-colors cursor-pointer flex items-center gap-1 px-2 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 border border-stone-200/80"
+                title="Import workout"
+              >
+                <span>📥</span>
+                <span>Import</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {error && (
@@ -386,6 +413,27 @@ export default function WorkoutBuilder({ routineId }: WorkoutBuilderProps) {
         onClose={() => setIsPickerOpen(false)}
         onSelectExercise={handleSelectExercise}
         userId={activeUserId || ""}
+      />
+
+      {/* Export Workout Modal */}
+      {resolvedRoutineId && (
+        <ExportWorkoutModal
+          isOpen={isExportModalOpen}
+          onClose={() => setIsExportModalOpen(false)}
+          routineId={resolvedRoutineId}
+          routineName={name}
+          userId={activeUserId || undefined}
+        />
+      )}
+
+      {/* Import Workout Modal */}
+      <ImportWorkoutModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImportSuccess={(newRoutineId) => {
+          setIsImportModalOpen(false);
+          router.push(`/workout/${newRoutineId}`);
+        }}
       />
     </main>
   );

@@ -16,6 +16,7 @@ import { formatSetLoad } from "@/lib/load/load-utils";
 import { deleteWorkoutSession } from "@/lib/db/workout-repository";
 import DeleteWorkoutModal from "./DeleteWorkoutModal";
 import EditSessionDateModal from "@/components/calendar/EditSessionDateModal";
+import ExportWorkoutModal from "@/components/workout/ExportWorkoutModal";
 
 interface WorkoutDetailClientProps {
   sessionId: string;
@@ -28,6 +29,7 @@ export default function WorkoutDetailClient({
   const { activeUserId, isLoading: isAuthLoading } = useUser();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isEditDateModalOpen, setIsEditDateModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const workoutDetail = useLiveQuery(
     async () => {
@@ -104,19 +106,30 @@ export default function WorkoutDetailClient({
           <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight text-zinc-950 leading-tight">
             {workoutDetail.routineName}
           </h1>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-mono text-stone-500">
               {workoutDetail.formattedDate}
             </p>
-            <button
-              type="button"
-              onClick={() => setIsEditDateModalOpen(true)}
-              className="text-xs font-mono font-medium text-stone-600 hover:text-zinc-900 bg-stone-100 hover:bg-stone-200 border border-stone-200/80 px-2.5 py-1 rounded-xl transition-colors cursor-pointer flex items-center gap-1 shadow-2xs active:scale-95"
-              title="Correct workout date"
-            >
-              <span>✏️</span>
-              <span>Edit Date</span>
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsExportModalOpen(true)}
+                className="text-xs font-mono font-medium text-stone-600 hover:text-zinc-900 bg-stone-100 hover:bg-stone-200 border border-stone-200/80 px-2.5 py-1 rounded-xl transition-colors cursor-pointer flex items-center gap-1 shadow-2xs active:scale-95"
+                title="Share this workout"
+              >
+                <span>📤</span>
+                <span>Share</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsEditDateModalOpen(true)}
+                className="text-xs font-mono font-medium text-stone-600 hover:text-zinc-900 bg-stone-100 hover:bg-stone-200 border border-stone-200/80 px-2.5 py-1 rounded-xl transition-colors cursor-pointer flex items-center gap-1 shadow-2xs active:scale-95"
+                title="Correct workout date"
+              >
+                <span>✏️</span>
+                <span>Edit Date</span>
+              </button>
+            </div>
           </div>
           <div className="pt-2 flex items-baseline gap-2">
             <span className="text-base font-bold font-mono text-zinc-900">
@@ -332,6 +345,15 @@ export default function WorkoutDetailClient({
             router.push("/history");
           }
         }}
+      />
+
+      {/* Export Workout Modal */}
+      <ExportWorkoutModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        sessionId={sessionId}
+        routineName={workoutDetail.routineName}
+        userId={activeUserId || undefined}
       />
     </main>
   );
