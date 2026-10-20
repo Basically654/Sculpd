@@ -18,6 +18,30 @@ declare global {
 
 const dbName = process.env.MONGODB_DB_NAME || "sculpd";
 
+// Circuit breaker state to fail fast when cloud database is offline
+let lastConnectionFailureTime = 0;
+let lastConnectionFailureError: any = null;
+const CONNECTION_FAILURE_COOLDOWN_MS = 15000; // 15s cooldown
+
+/**
+ * Checks whether an error represents a MongoDB or TLS connectivity failure.
+ */
+export function isMongoOfflineError(error: any): boolean {
+  if (!error) return false;
+  return Boolean(
+    error?.name?.includes("Mongo") ||
+    error?.message?.includes("MONGODB_URI") ||
+    error?.message?.includes("getaddrinfo") ||
+    error?.message?.includes("timed out") ||
+    error?.message?.includes("ECONNREFUSED") ||
+    error?.message?.includes("buffering timed out") ||
+    error?.message?.includes("SSL") ||
+    error?.message?.includes("tlsv1 alert") ||
+    error?.message?.includes("Cloud database is currently unreachable") ||
+    error?.code === "ERR_SSL_TLSV1_ALERT_INTERNAL_ERROR"
+  );
+}
+
 /**
  * Returns a cached MongoClient promise.
  * Avoids throwing at module load time so Next.js static builds do not crash
@@ -32,6 +56,15 @@ export function getMongoClientPromise(): Promise<MongoClient> {
     );
   }
 
+  // Fast-fail if we recently failed connecting to prevent stacking 5-10s timeouts
+  const now = Date.now();
+  if (
+    now - lastConnectionFailureTime < CONNECTION_FAILURE_COOLDOWN_MS &&
+    lastConnectionFailureError
+  ) {
+    return Promise.reject(lastConnectionFailureError);
+  }
+
   // In Next.js serverless functions (e.g. Vercel), cache the client promise globally
   // so warm invocations reuse the MongoDB connection pool without socket exhaustion or TLS alerts.
   if (!global._mongoClientPromise) {
@@ -39,10 +72,20 @@ export function getMongoClientPromise(): Promise<MongoClient> {
       serverSelectionTimeoutMS: 5000,
       connectTimeoutMS: 5000,
     });
-    global._mongoClientPromise = client.connect().catch((err) => {
-      global._mongoClientPromise = undefined;
-      throw err;
-    });
+    global._mongoClientPromise = client
+      .connect()
+      .then((connectedClient) => {
+        // Clear failure state on success
+        lastConnectionFailureTime = 0;
+        lastConnectionFailureError = null;
+        return connectedClient;
+      })
+      .catch((err) => {
+        global._mongoClientPromise = undefined;
+        lastConnectionFailureTime = Date.now();
+        lastConnectionFailureError = err;
+        throw err;
+      });
   }
   return global._mongoClientPromise;
 }
@@ -146,6 +189,9 @@ export async function ensureMongoIndexes(): Promise<void> {
 
     indexesEnsured = true;
   } catch (err) {
+    if (isMongoOfflineError(err)) {
+      throw err;
+    }
     console.warn("MongoDB index creation warning:", err);
   }
 }

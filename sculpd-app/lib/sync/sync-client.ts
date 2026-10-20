@@ -183,6 +183,22 @@ export async function pullRemoteUpdates(
       }
     }
 
+    // Merge user profiles (safe fields: displayName, avatarColor, bodyweight)
+    if (data.users && data.users.length > 0) {
+      for (const remoteUser of data.users) {
+        const local = await db.users.get(remoteUser.id);
+        if (local) {
+          await db.users.update(remoteUser.id, {
+            displayName: remoteUser.displayName || local.displayName,
+            avatarColor: remoteUser.avatarColor || local.avatarColor,
+            bodyweight: remoteUser.bodyweight ?? local.bodyweight,
+            updatedAt: remoteUser.updatedAt || local.updatedAt,
+          });
+          pulledCount++;
+        }
+      }
+    }
+
     // Merge shared catalog & user routines: routines, exercises, routineExercises
     if (data.routines && data.routines.length > 0) {
       await db.routines.bulkPut(data.routines);

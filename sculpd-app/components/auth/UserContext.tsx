@@ -72,10 +72,18 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         const users = await listSafeUsers();
         setAllProfiles(users);
 
-        const savedUserId =
+        let savedUserId =
           typeof window !== "undefined"
             ? localStorage.getItem(SESSION_STORAGE_KEY)
             : null;
+
+        // If no active session was saved but exactly one profile exists on device, auto-select it
+        if (!savedUserId && users.length === 1) {
+          savedUserId = users[0].id;
+          if (typeof window !== "undefined") {
+            localStorage.setItem(SESSION_STORAGE_KEY, savedUserId);
+          }
+        }
 
         if (savedUserId) {
           const matchingUser = await getSafeUserById(savedUserId);
@@ -106,7 +114,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
                 if (cachedToken) setSessionToken(cachedToken);
               }
             }
-          } else {
+          } else if (users.length > 0) {
+            // Only clear stored ID if users exist and this savedUserId does not match any
             localStorage.removeItem(SESSION_STORAGE_KEY);
             localStorage.removeItem(TOKEN_STORAGE_KEY);
           }

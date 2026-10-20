@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { SafeUser, AvatarColor } from "@/types/models";
 import { useUser } from "./UserContext";
+import { recoverLegacyData } from "@/lib/db";
 import PinPadModal from "./PinPadModal";
 import AddProfileModal from "./AddProfileModal";
 import BackupModal from "./BackupModal";
@@ -20,11 +21,13 @@ const COLOR_MAP: Record<AvatarColor, { border: string; bg: string; text: string 
 };
 
 export default function WhoIsTrainingView() {
-  const { allProfiles, signIn, createProfile, isLoading } = useUser();
+  const { allProfiles, signIn, createProfile, isLoading, refreshProfiles } = useUser();
   const [selectedUser, setSelectedUser] = useState<SafeUser | null>(null);
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
+  const [isScanningLegacy, setIsScanningLegacy] = useState(false);
+  const [recoveryFeedback, setRecoveryFeedback] = useState<string | null>(null);
 
   const handleProfileClick = (user: SafeUser) => {
     setSelectedUser(user);
@@ -50,6 +53,24 @@ export default function WhoIsTrainingView() {
     const newUser = await createProfile(name, pin, color, bodyweight);
     setSelectedUser(newUser);
     setIsPinModalOpen(true);
+  };
+
+  const handleScanLegacy = async () => {
+    setIsScanningLegacy(true);
+    setRecoveryFeedback(null);
+    try {
+      const res = await recoverLegacyData();
+      if (res.success) {
+        setRecoveryFeedback(`✓ ${res.message}`);
+        await refreshProfiles();
+      } else {
+        setRecoveryFeedback(res.message);
+      }
+    } catch (err: any) {
+      setRecoveryFeedback(err?.message || "Failed to scan device storage.");
+    } finally {
+      setIsScanningLegacy(false);
+    }
   };
 
   if (isLoading) {
@@ -88,13 +109,41 @@ export default function WhoIsTrainingView() {
             <p className="text-xs text-stone-500 mt-1 mb-6 leading-relaxed max-w-xs mx-auto">
               Create your local profile to start tracking workouts with private device storage.
             </p>
-            <button
-              type="button"
-              onClick={() => setIsAddModalOpen(true)}
-              className="py-3 px-6 rounded-xl bg-zinc-900 text-white font-bold uppercase text-xs tracking-wider hover:bg-zinc-800 active:scale-95 transition-all shadow-sm cursor-pointer"
-            >
-              + Create First Profile
-            </button>
+            <div className="flex flex-col gap-2 max-w-xs mx-auto">
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(true)}
+                className="w-full py-3 px-6 rounded-xl bg-zinc-900 text-white font-bold uppercase text-xs tracking-wider hover:bg-zinc-800 active:scale-95 transition-all shadow-sm cursor-pointer"
+              >
+                + Create First Profile
+              </button>
+
+              <button
+                type="button"
+                onClick={handleScanLegacy}
+                disabled={isScanningLegacy}
+                className="w-full py-2.5 px-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 font-bold text-xs uppercase tracking-wider hover:bg-amber-100 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isScanningLegacy ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-amber-800 border-t-transparent rounded-full animate-spin" />
+                    Scanning Storage...
+                  </>
+                ) : (
+                  <>
+                    <span>🔍</span>
+                    Scan & Recover Workouts
+                  </>
+                )}
+              </button>
+            </div>
+
+            {recoveryFeedback && (
+              <p className="mt-3 text-[11px] text-amber-800 font-medium px-3 py-2 bg-amber-50 border border-amber-200/60 rounded-xl text-center">
+                {recoveryFeedback}
+              </p>
+            )}
+
             <button
               type="button"
               onClick={() => setIsBackupModalOpen(true)}
